@@ -267,70 +267,66 @@ export default function SurveyClient({
   }
 
   if (step === "home") {
-    const LANDING_VIDEO: Record<string, string> = {
-      Mujer: "1IcfJPZuTnQCfvlIo8_x9xGnVg_bpA5mU",
-      Hombre: "1JCQPvGRMqJBT1pWcJnj3Y5NHd7TAV2xe",
-    };
     const enter = (g: string) => {
       setGen(g);
       setCat("");
       setQ("");
       setStep("catalog");
     };
-    const Cover = ({ g, label }: { g: string; label: string }) => (
-      <div className="flex-1 flex flex-col items-center">
-        <div className="w-full max-w-[320px] aspect-[9/16] overflow-hidden rounded-2xl bg-stone-100">
-          <iframe
-            src={`https://drive.google.com/file/d/${LANDING_VIDEO[g]}/preview`}
-            title={label}
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-            className="w-full h-full"
-          />
+    const Cover = ({
+      g,
+      label,
+      src,
+    }: {
+      g: string;
+      label: string;
+      src: string;
+    }) => (
+      <button
+        onClick={() => enter(g)}
+        className="relative flex-1 h-[50vh] sm:h-screen overflow-hidden group"
+      >
+        <video
+          src={src}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+          <span className="text-4xl sm:text-6xl font-semibold tracking-tight">
+            {label}
+          </span>
+          <span className="mt-4 text-xs uppercase tracking-[0.25em] border-b border-white/80 pb-1">
+            Ver catálogo
+          </span>
         </div>
-        <span className="mt-5 text-2xl sm:text-3xl font-semibold tracking-tight">
-          {label}
-        </span>
-        <button
-          onClick={() => enter(g)}
-          className="mt-3 bg-black text-white text-sm font-medium rounded-full px-8 py-2.5"
-        >
-          Ver catálogo →
-        </button>
-      </div>
+      </button>
     );
     return (
-      <main className="min-h-screen bg-white flex flex-col">
-        <div className="px-5 pt-10 pb-8 text-center">
-          <p className="text-[11px] tracking-[0.25em] text-stone-400 uppercase">
+      <main className="relative h-screen w-screen overflow-hidden bg-black">
+        <div className="flex flex-col sm:flex-row h-full">
+          <Cover g="Mujer" label="MUJER" src="/landing/mujer.mp4" />
+          <Cover g="Hombre" label="HOMBRE" src="/landing/hombre.mp4" />
+        </div>
+        <div className="absolute top-0 inset-x-0 pt-6 text-center pointer-events-none">
+          <p className="text-[11px] tracking-[0.3em] text-white/80 uppercase">
             Encuesta de catálogo
           </p>
-          <h1 className="mt-2 text-4xl sm:text-5xl font-semibold tracking-tight">
-            MORMAII SPORTS
+          <h1 className="mt-1 text-2xl sm:text-3xl font-semibold tracking-tight text-white drop-shadow">
+            MORMAII SPORTS · Verão 27
           </h1>
-          <p className="mt-1 text-sm tracking-[0.3em] text-stone-500 uppercase">
-            Verão 27
-          </p>
-          <p className="mt-4 text-sm text-stone-500 max-w-md mx-auto">
-            Armá tu selección del catálogo de training. Marcá lo que comprarías
-            y nos ayudás a decidir qué traer. Elegí por dónde empezar.
-          </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-12 sm:gap-8 px-5 pb-10">
-          <Cover g="Mujer" label="MUJER" />
-          <Cover g="Hombre" label="HOMBRE" />
-        </div>
-        <div className="text-center pb-12">
+        <div className="absolute bottom-0 inset-x-0 pb-6 text-center">
           <button
             onClick={() => enter("")}
-            className="text-sm text-stone-600 underline underline-offset-4"
+            className="text-xs uppercase tracking-[0.2em] text-white/90 underline underline-offset-4"
           >
             Ver todo el catálogo
           </button>
-          <p className="mt-6 text-[11px] text-stone-400 max-w-sm mx-auto leading-relaxed">
-            Al abrir cada producto vas a ver sus fotos, otras variantes y la
-            ficha técnica de la tela (con video cuando está disponible).
-          </p>
         </div>
       </main>
     );
