@@ -137,7 +137,58 @@ export type Product = {
   cost: number;
   retail: number;
   sizes: string[];
+  line: string;
 };
+
+// Tejido / línea del producto. Productos de la misma línea suelen ser
+// "variantes" (mismo modelo, otro corte/estampa/color). Más específico primero.
+const LINE_KEYWORDS = [
+  "CROCO MARY",
+  "POWER COMFY",
+  "POWER GLOSS",
+  "DRY MINI POINT",
+  "DRY AIR FLOW",
+  "MALHA FURADINHA",
+  "MALHA COTTON",
+  "DEMICOMPRESSION",
+  "CIRRE POLIAMIDA",
+  "HELANCA DRY",
+  "TACTEL ASPEN",
+  "RIBANA",
+  "CRISTAL",
+  "MARY",
+  "COTTON",
+  "MADRID",
+  "SUPLEX",
+];
+
+const LINE_LABEL: Record<string, string> = {
+  "POWER COMFY": "Power Comfy",
+  "POWER GLOSS": "Power Gloss",
+  "DRY MINI POINT": "Dry Mini Point",
+  "DRY AIR FLOW": "Dry Air Flow",
+  "MALHA FURADINHA": "Malha Furadinha",
+  "MALHA COTTON": "Malha Cotton",
+  "CROCO MARY": "Croco Mary",
+  DEMICOMPRESSION: "Demicompression",
+  "CIRRE POLIAMIDA": "Cirre",
+  "HELANCA DRY": "Helanca Dry",
+  "TACTEL ASPEN": "Tactel Aspen",
+  RIBANA: "Ribana",
+  CRISTAL: "Cristal",
+  MARY: "Mary",
+  COTTON: "Cotton",
+  MADRID: "Madrid",
+  SUPLEX: "Suplex",
+};
+
+function lineOf(desc: string): string {
+  const d = desc.toUpperCase();
+  for (const k of LINE_KEYWORDS) {
+    if (d.includes(k)) return LINE_LABEL[k] ?? k;
+  }
+  return "";
+}
 
 const APPAREL_SIZES = ["PP", "P", "M", "G", "GG", "XG"];
 const ONE_SIZE = ["Único"];
@@ -221,6 +272,7 @@ function parse(): Product[] {
         cost,
         retail,
         sizes: category === "Accesorios" ? ONE_SIZE : APPAREL_SIZES,
+        line: lineOf(desc),
       };
     });
 }

@@ -28,6 +28,7 @@ export default function SurveyPage({ params }: { params: { token: string } }) {
     gender: p.gender,
     retail: p.retail,
     sizes: p.sizes,
+    line: p.line,
   }));
 
   return (
