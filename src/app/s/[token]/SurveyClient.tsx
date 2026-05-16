@@ -267,51 +267,41 @@ export default function SurveyClient({
   }
 
   if (step === "home") {
-    const pick = (g: string) =>
-      products.find((p) => p.gender === g && imagesFor(p).length > 0) ||
-      products.find((p) => p.gender === g);
-    const heroF = pick("Mujer");
-    const heroM = pick("Hombre");
+    const LANDING_VIDEO: Record<string, string> = {
+      Mujer: "1IcfJPZuTnQCfvlIo8_x9xGnVg_bpA5mU",
+      Hombre: "1JCQPvGRMqJBT1pWcJnj3Y5NHd7TAV2xe",
+    };
     const enter = (g: string) => {
       setGen(g);
       setCat("");
       setQ("");
       setStep("catalog");
     };
-    const Tile = ({
-      g,
-      label,
-      p,
-    }: {
-      g: string;
-      label: string;
-      p?: P;
-    }) => (
-      <button
-        onClick={() => enter(g)}
-        className="relative flex-1 min-h-[44vh] sm:min-h-[70vh] overflow-hidden group"
-      >
-        <DriveImg
-          id={p ? imagesFor(p)[0] || "" : ""}
-          alt={label}
-          w={1200}
-          className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition duration-700"
-          fallback={<div className="absolute inset-0 bg-stone-200" />}
-        />
-        <div className="absolute inset-0 bg-black/25 group-hover:bg-black/35 transition" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-          <span className="text-3xl sm:text-5xl font-semibold tracking-tight">
-            {label}
-          </span>
-          <span className="mt-3 text-xs uppercase tracking-[0.2em] border-b border-white/70 pb-1">
-            Ver catálogo
-          </span>
+    const Cover = ({ g, label }: { g: string; label: string }) => (
+      <div className="flex-1 flex flex-col items-center">
+        <div className="w-full max-w-[320px] aspect-[9/16] overflow-hidden rounded-2xl bg-stone-100">
+          <iframe
+            src={`https://drive.google.com/file/d/${LANDING_VIDEO[g]}/preview`}
+            title={label}
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+            className="w-full h-full"
+          />
         </div>
-      </button>
+        <span className="mt-5 text-2xl sm:text-3xl font-semibold tracking-tight">
+          {label}
+        </span>
+        <button
+          onClick={() => enter(g)}
+          className="mt-3 bg-black text-white text-sm font-medium rounded-full px-8 py-2.5"
+        >
+          Ver catálogo →
+        </button>
+      </div>
     );
     return (
       <main className="min-h-screen bg-white flex flex-col">
-        <div className="px-5 pt-10 pb-7 text-center">
+        <div className="px-5 pt-10 pb-8 text-center">
           <p className="text-[11px] tracking-[0.25em] text-stone-400 uppercase">
             Encuesta de catálogo
           </p>
@@ -326,11 +316,11 @@ export default function SurveyClient({
             y nos ayudás a decidir qué traer. Elegí por dónde empezar.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row">
-          <Tile g="Mujer" label="MUJER" p={heroF} />
-          <Tile g="Hombre" label="HOMBRE" p={heroM} />
+        <div className="flex flex-col sm:flex-row gap-12 sm:gap-8 px-5 pb-10">
+          <Cover g="Mujer" label="MUJER" />
+          <Cover g="Hombre" label="HOMBRE" />
         </div>
-        <div className="text-center py-7">
+        <div className="text-center pb-12">
           <button
             onClick={() => enter("")}
             className="text-sm text-stone-600 underline underline-offset-4"
@@ -752,14 +742,16 @@ export default function SurveyClient({
                     {fab.desc}
                   </p>
                   {fab.videoId && (
-                    <div className="mt-3 aspect-video w-full overflow-hidden rounded-lg bg-stone-100">
-                      <iframe
-                        src={`https://drive.google.com/file/d/${fab.videoId}/preview`}
-                        title={`Tela ${fab.name}`}
-                        allow="autoplay; encrypted-media"
-                        allowFullScreen
-                        className="w-full h-full"
-                      />
+                    <div className="mt-3 flex justify-center">
+                      <div className="w-full max-w-[260px] aspect-[9/16] overflow-hidden rounded-lg bg-stone-100">
+                        <iframe
+                          src={`https://drive.google.com/file/d/${fab.videoId}/preview`}
+                          title={`Tela ${fab.name}`}
+                          allow="autoplay; encrypted-media"
+                          allowFullScreen
+                          className="w-full h-full"
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
