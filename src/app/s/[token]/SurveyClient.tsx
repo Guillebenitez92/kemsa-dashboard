@@ -27,6 +27,30 @@ const FREQ_OPTS = [
 
 const USD_PYG = 6500;
 
+// Grupo de talle por tipo de prenda: el talle elegido se recuerda por grupo
+// (ej: ponés M en una de arriba → las próximas de arriba ya vienen con M).
+const SIZE_GROUP: Record<string, string> = {
+  Tops: "arriba",
+  Cropped: "arriba",
+  Remeras: "arriba",
+  Musculosas: "arriba",
+  Blusas: "arriba",
+  Camisas: "arriba",
+  Camperas: "arriba",
+  Shorts: "abajo",
+  "Calzas / Leggings": "abajo",
+  Pantalones: "abajo",
+  Bermudas: "abajo",
+  Polleras: "abajo",
+  Vestidos: "entero",
+  Enterizos: "entero",
+  Bodies: "entero",
+  Accesorios: "acc",
+};
+function groupOf(category: string): string {
+  return SIZE_GROUP[category] || "otro";
+}
+
 function usd(n: number) {
   return "US$ " + Math.round(n);
 }
@@ -96,6 +120,7 @@ export default function SurveyClient({
   const [manifest, setManifest] = useState<Record<string, string[]> | null>(null);
   const [openCode, setOpenCode] = useState<string | null>(null);
   const [gIdx, setGIdx] = useState(0);
+  const [sizeByGroup, setSizeByGroup] = useState<Record<string, string>>({});
 
   const [name, setName] = useState("");
   const [gender, setGender] = useState("");
@@ -108,11 +133,14 @@ export default function SurveyClient({
 
   const selKey = `kemsa_sel_${token}`;
   const doneKey = `kemsa_done_${token}`;
+  const sizesKey = `kemsa_sizes_${token}`;
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(selKey);
       if (saved) setSelected(JSON.parse(saved));
+      const sv = localStorage.getItem(sizesKey);
+      if (sv) setSizeByGroup(JSON.parse(sv));
       if (localStorage.getItem(doneKey) === "1") setStep("done");
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -123,6 +151,12 @@ export default function SurveyClient({
       localStorage.setItem(selKey, JSON.stringify(selected));
     } catch {}
   }, [selected, selKey]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(sizesKey, JSON.stringify(sizeByGroup));
+    } catch {}
+  }, [sizeByGroup, sizesKey]);
 
   useEffect(() => {
     fetch("/products/manifest.json", { cache: "no-store" })
@@ -144,8 +178,14 @@ export default function SurveyClient({
       if (next[p.code]) {
         delete next[p.code];
       } else {
+        const remembered = sizeByGroup[groupOf(p.category)];
         next[p.code] = {
-          size: p.sizes.length === 1 ? p.sizes[0] : "",
+          size:
+            p.sizes.length === 1
+              ? p.sizes[0]
+              : remembered && p.sizes.includes(remembered)
+              ? remembered
+              : "",
           favImg: null,
         };
       }
@@ -157,6 +197,12 @@ export default function SurveyClient({
     setSelected((prev) =>
       prev[code] ? { ...prev, [code]: { ...prev[code], ...p } } : prev,
     );
+  }
+
+  // Elegir talle y recordarlo para todas las prendas del mismo grupo.
+  function rememberSize(p: P, s: string) {
+    patch(p.code, { size: s });
+    setSizeByGroup((prev) => ({ ...prev, [groupOf(p.category)]: s }));
   }
 
 
@@ -544,7 +590,7 @@ export default function SurveyClient({
                   {p.sizes.map((s) => (
                     <button
                       key={s}
-                      onClick={() => patch(p.code, { size: s })}
+                      onClick={() => rememberSize(p, s)}
                       className={`min-w-[34px] text-[11px] px-2 py-1 border ${
                         sel?.size === s
                           ? "bg-black text-white border-black"
@@ -677,7 +723,7 @@ export default function SurveyClient({
                     {openP.sizes.map((s) => (
                       <button
                         key={s}
-                        onClick={() => patch(openP.code, { size: s })}
+                        onClick={() => rememberSize(openP, s)}
                         className={`min-w-[40px] text-xs px-3 py-2 border ${
                           openSel.size === s
                             ? "bg-black text-white border-black"
@@ -812,7 +858,7 @@ export default function SurveyClient({
           <div className="text-sm text-stone-600 flex items-center gap-1.5">
             <Heart filled className="w-4 h-4 text-stone-900" />
             <span className="font-semibold text-stone-900">{count}</span>{" "}
-            favorito{count === 1 ? "" : "s"}
+            Me gusta
           </div>
           <button
             disabled={count === 0}
