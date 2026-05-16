@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { fabricFor } from "@/lib/fabrics";
 
 type P = {
   code: string;
@@ -87,7 +88,7 @@ export default function SurveyClient({
   categories: string[];
   multiplier: number;
 }) {
-  const [step, setStep] = useState<"catalog" | "form" | "done">("catalog");
+  const [step, setStep] = useState<"home" | "catalog" | "form" | "done">("home");
   const [selected, setSelected] = useState<Record<string, Sel>>({});
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("");
@@ -265,6 +266,86 @@ export default function SurveyClient({
     );
   }
 
+  if (step === "home") {
+    const pick = (g: string) =>
+      products.find((p) => p.gender === g && imagesFor(p).length > 0) ||
+      products.find((p) => p.gender === g);
+    const heroF = pick("Mujer");
+    const heroM = pick("Hombre");
+    const enter = (g: string) => {
+      setGen(g);
+      setCat("");
+      setQ("");
+      setStep("catalog");
+    };
+    const Tile = ({
+      g,
+      label,
+      p,
+    }: {
+      g: string;
+      label: string;
+      p?: P;
+    }) => (
+      <button
+        onClick={() => enter(g)}
+        className="relative flex-1 min-h-[44vh] sm:min-h-[70vh] overflow-hidden group"
+      >
+        <DriveImg
+          id={p ? imagesFor(p)[0] || "" : ""}
+          alt={label}
+          w={1200}
+          className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition duration-700"
+          fallback={<div className="absolute inset-0 bg-stone-200" />}
+        />
+        <div className="absolute inset-0 bg-black/25 group-hover:bg-black/35 transition" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+          <span className="text-3xl sm:text-5xl font-semibold tracking-tight">
+            {label}
+          </span>
+          <span className="mt-3 text-xs uppercase tracking-[0.2em] border-b border-white/70 pb-1">
+            Ver catálogo
+          </span>
+        </div>
+      </button>
+    );
+    return (
+      <main className="min-h-screen bg-white flex flex-col">
+        <div className="px-5 pt-10 pb-7 text-center">
+          <p className="text-[11px] tracking-[0.25em] text-stone-400 uppercase">
+            Encuesta de catálogo
+          </p>
+          <h1 className="mt-2 text-4xl sm:text-5xl font-semibold tracking-tight">
+            MORMAII SPORTS
+          </h1>
+          <p className="mt-1 text-sm tracking-[0.3em] text-stone-500 uppercase">
+            Verão 27
+          </p>
+          <p className="mt-4 text-sm text-stone-500 max-w-md mx-auto">
+            Armá tu selección del catálogo de training. Marcá lo que comprarías
+            y nos ayudás a decidir qué traer. Elegí por dónde empezar.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row">
+          <Tile g="Mujer" label="MUJER" p={heroF} />
+          <Tile g="Hombre" label="HOMBRE" p={heroM} />
+        </div>
+        <div className="text-center py-7">
+          <button
+            onClick={() => enter("")}
+            className="text-sm text-stone-600 underline underline-offset-4"
+          >
+            Ver todo el catálogo
+          </button>
+          <p className="mt-6 text-[11px] text-stone-400 max-w-sm mx-auto leading-relaxed">
+            Al abrir cada producto vas a ver sus fotos, otras variantes y la
+            ficha técnica de la tela (con video cuando está disponible).
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   if (step === "form") {
     return (
       <main className="min-h-screen bg-white p-5 max-w-lg mx-auto">
@@ -348,13 +429,17 @@ export default function SurveyClient({
   const openImgs = openP ? imagesFor(openP) : [];
   const openSel = openCode ? selected[openCode] : undefined;
   const reco = openP ? recommendFor(openP) : null;
+  const fab = openP ? fabricFor(openP.line) : undefined;
 
   return (
     <main className="min-h-screen pb-28 bg-white">
-      <header className="px-5 pt-7 pb-5 border-b border-stone-200">
-        <p className="text-[11px] tracking-[0.18em] text-stone-400 uppercase">
-          Encuesta de catálogo
-        </p>
+      <header className="px-5 pt-6 pb-5 border-b border-stone-200">
+        <button
+          onClick={() => setStep("home")}
+          className="text-[11px] tracking-[0.18em] text-stone-400 uppercase hover:text-stone-700"
+        >
+          ← Inicio · Encuesta de catálogo
+        </button>
         <h1 className="mt-1 text-3xl sm:text-4xl font-semibold tracking-tight">
           Mormaii Sports — Verão 27
         </h1>
@@ -645,6 +730,39 @@ export default function SurveyClient({
                     </button>
                   )}
                 </>
+              )}
+
+              {fab && (
+                <div className="mt-7 border-t border-stone-100 pt-5">
+                  <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">
+                    La tela · {fab.name}
+                  </p>
+                  <p className="text-sm font-medium mt-1">{fab.tagline}</p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {fab.features.map((f) => (
+                      <span
+                        key={f}
+                        className="text-[11px] px-2 py-1 border border-stone-300 text-stone-600 rounded-full"
+                      >
+                        {f}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-xs text-stone-500 leading-relaxed mt-3">
+                    {fab.desc}
+                  </p>
+                  {fab.videoId && (
+                    <div className="mt-3 aspect-video w-full overflow-hidden rounded-lg bg-stone-100">
+                      <iframe
+                        src={`https://drive.google.com/file/d/${fab.videoId}/preview`}
+                        title={`Tela ${fab.name}`}
+                        allow="autoplay; encrypted-media"
+                        allowFullScreen
+                        className="w-full h-full"
+                      />
+                    </div>
+                  )}
+                </div>
               )}
 
               {reco && reco.items.length > 0 && (
