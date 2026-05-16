@@ -129,6 +129,7 @@ export type Gender = "Mujer" | "Hombre" | "Unisex";
 
 export type Product = {
   code: string;
+  imgCode: string;
   rawName: string;
   name: string;
   category: string;
@@ -208,8 +209,11 @@ function parse(): Product[] {
       const cost = parseFloat(costStr);
       const retail = Math.round(cost * RETAIL_MULTIPLIER * 100) / 100;
       const category = categoryOf(desc);
+      const trimmedCode = code.trim();
+      const imgCode = (trimmedCode.match(/\d+/)?.[0] || trimmedCode).trim();
       return {
-        code: code.trim(),
+        code: trimmedCode,
+        imgCode,
         rawName: desc.trim(),
         name: prettyName(desc.trim()),
         category,

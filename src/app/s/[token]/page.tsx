@@ -22,6 +22,7 @@ export default function SurveyPage({ params }: { params: { token: string } }) {
 
   const products = PRODUCTS.map((p) => ({
     code: p.code,
+    imgCode: p.imgCode,
     name: p.name,
     category: p.category,
     gender: p.gender,

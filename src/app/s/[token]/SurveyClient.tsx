@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 type P = {
   code: string;
+  imgCode: string;
   name: string;
   category: string;
   gender: string;
@@ -24,8 +25,20 @@ function money(n: number) {
   return "US$ " + n.toFixed(2);
 }
 
-function ProductImg({ code, category }: { code: string; category: string }) {
+function ProductImg({
+  imgCode,
+  code,
+  category,
+  manifest,
+}: {
+  imgCode: string;
+  code: string;
+  category: string;
+  manifest: Record<string, string> | null;
+}) {
   const [err, setErr] = useState(false);
+  const mapped = manifest?.[imgCode];
+  const src = mapped ? `/products/${mapped}` : `/products/${imgCode}.jpg`;
   if (err) {
     return (
       <div className="aspect-[3/4] w-full rounded-xl bg-gradient-to-br from-stone-100 to-stone-200 flex flex-col items-center justify-center text-stone-400">
@@ -37,7 +50,7 @@ function ProductImg({ code, category }: { code: string; category: string }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={`/products/${code}.jpg`}
+      src={src}
       alt={code}
       className="aspect-[3/4] w-full rounded-xl object-cover bg-stone-100"
       onError={() => setErr(true)}
@@ -70,6 +83,7 @@ export default function SurveyClient({
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [manifest, setManifest] = useState<Record<string, string> | null>(null);
 
   const selKey = `kemsa_sel_${token}`;
   const doneKey = `kemsa_done_${token}`;
@@ -88,6 +102,13 @@ export default function SurveyClient({
       localStorage.setItem(selKey, JSON.stringify(selected));
     } catch {}
   }, [selected, selKey]);
+
+  useEffect(() => {
+    fetch("/products/manifest.json", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((m) => m && typeof m === "object" && setManifest(m))
+      .catch(() => {});
+  }, []);
 
   const count = Object.keys(selected).length;
 
@@ -304,7 +325,12 @@ export default function SurveyClient({
               }`}
             >
               <button onClick={() => toggle(p)} className="block w-full text-left">
-                <ProductImg code={p.code} category={p.category} />
+                <ProductImg
+                  imgCode={p.imgCode}
+                  code={p.code}
+                  category={p.category}
+                  manifest={manifest}
+                />
                 <div className="mt-2 flex items-start justify-between gap-1">
                   <span className="text-[11px] text-stone-400">#{p.code}</span>
                   <span
