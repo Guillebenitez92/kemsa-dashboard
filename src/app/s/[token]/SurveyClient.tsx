@@ -156,6 +156,20 @@ export default function SurveyClient({
     );
   }
 
+  // Dar like eligiendo a la vez el color/foto (cada foto es una variante de color).
+  function likeWithImg(p: P, id: string) {
+    setSelected((prev) => {
+      const cur = prev[p.code];
+      return {
+        ...prev,
+        [p.code]: {
+          size: cur?.size ?? (p.sizes.length === 1 ? p.sizes[0] : ""),
+          favImg: id,
+        },
+      };
+    });
+  }
+
   const byCode = useMemo(
     () => Object.fromEntries(products.map((p) => [p.code, p])),
     [products],
@@ -517,49 +531,64 @@ export default function SurveyClient({
                 <Price n={p.retail} />
               </button>
 
-              <button
-                onClick={() => toggle(p)}
-                className={`mt-2.5 w-full rounded-full py-2 text-xs font-medium border transition ${
-                  isSel
-                    ? "bg-black text-white border-black"
-                    : "bg-white text-stone-900 border-stone-300 hover:border-stone-900"
-                }`}
-              >
-                {isSel ? "✓ Me interesa" : "Me interesa"}
-              </button>
-
-              {isSel && (
-                <div className="mt-2.5">
-                  <div className="flex flex-wrap gap-1.5">
-                    {p.sizes.map((s) => (
+              <div className="mt-2.5 flex items-center gap-2">
+                <button
+                  onClick={() => toggle(p)}
+                  aria-label={isSel ? "Quitar me gusta" : "Me gusta"}
+                  className={`shrink-0 rounded-full border w-9 h-9 flex items-center justify-center transition ${
+                    isSel
+                      ? "bg-black text-white border-black"
+                      : "bg-white text-stone-500 border-stone-300 hover:border-stone-900 hover:text-stone-900"
+                  }`}
+                >
+                  <Heart filled={isSel} />
+                </button>
+                {imgs.length > 0 && (
+                  <div className="flex items-center gap-1 overflow-hidden">
+                    {imgs.slice(0, 5).map((id) => (
                       <button
-                        key={s}
-                        onClick={() => patch(p.code, { size: s })}
-                        className={`min-w-[34px] text-[11px] px-2 py-1 border ${
-                          sel?.size === s
-                            ? "bg-black text-white border-black"
-                            : "bg-white text-stone-600 border-stone-300"
+                        key={id}
+                        onClick={() => likeWithImg(p, id)}
+                        aria-label="Elegir color"
+                        className={`shrink-0 h-7 w-7 overflow-hidden rounded border ${
+                          sel?.favImg === id
+                            ? "border-black ring-1 ring-black"
+                            : "border-stone-200"
                         }`}
                       >
-                        {s}
+                        <DriveImg
+                          id={id}
+                          alt="color"
+                          w={80}
+                          className="h-full w-full object-cover"
+                          fallback={<div className="h-full w-full bg-stone-200" />}
+                        />
                       </button>
                     ))}
+                    {imgs.length > 5 && (
+                      <span className="text-[10px] text-stone-400 ml-0.5">
+                        +{imgs.length - 5}
+                      </span>
+                    )}
                   </div>
-                  {imgs.length > 1 && (
+                )}
+              </div>
+
+              {isSel && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {p.sizes.map((s) => (
                     <button
-                      onClick={() => {
-                        setOpenCode(p.code);
-                        setGIdx(
-                          sel?.favImg ? Math.max(0, imgs.indexOf(sel.favImg)) : 0,
-                        );
-                      }}
-                      className="mt-2 text-[11px] text-stone-500 underline underline-offset-2"
+                      key={s}
+                      onClick={() => patch(p.code, { size: s })}
+                      className={`min-w-[34px] text-[11px] px-2 py-1 border ${
+                        sel?.size === s
+                          ? "bg-black text-white border-black"
+                          : "bg-white text-stone-600 border-stone-300"
+                      }`}
                     >
-                      {sel?.favImg
-                        ? "✓ Color/foto elegido"
-                        : "Elegir color/foto favorita"}
+                      {s}
                     </button>
-                  )}
+                  ))}
                 </div>
               )}
             </div>
@@ -664,13 +693,14 @@ export default function SurveyClient({
 
               <button
                 onClick={() => toggle(openP)}
-                className={`mt-4 w-full rounded-full py-3 text-sm font-medium border ${
+                className={`mt-4 w-full rounded-full py-3 text-sm font-medium border flex items-center justify-center gap-2 ${
                   openSel
                     ? "bg-black text-white border-black"
                     : "bg-white text-stone-900 border-stone-300"
                 }`}
               >
-                {openSel ? "✓ Me interesa" : "Me interesa"}
+                <Heart filled={!!openSel} className="w-4 h-4" />
+                {openSel ? "Te gusta" : "Me gusta"}
               </button>
 
               {openSel && (
@@ -814,9 +844,10 @@ export default function SurveyClient({
 
       <div className="fixed bottom-0 inset-x-0 bg-white border-t border-stone-200 px-5 py-4 z-30">
         <div className="max-w-lg mx-auto flex items-center gap-3">
-          <div className="text-sm text-stone-600">
+          <div className="text-sm text-stone-600 flex items-center gap-1.5">
+            <Heart filled className="w-4 h-4 text-stone-900" />
             <span className="font-semibold text-stone-900">{count}</span>{" "}
-            seleccionado{count === 1 ? "" : "s"}
+            favorito{count === 1 ? "" : "s"}
           </div>
           <button
             disabled={count === 0}
@@ -828,6 +859,23 @@ export default function SurveyClient({
         </div>
       </div>
     </main>
+  );
+}
+
+function Heart({ filled, className }: { filled: boolean; className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className || "w-5 h-5"}
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 20.7s-7.6-4.7-9.6-9.4C1 7.9 3 4.8 6.3 4.8c1.9 0 3.3 1 3.9 2.1.6-1.1 2-2.1 3.9-2.1 3.3 0 5.3 3.1 3.9 6.5-2 4.7-9.9 9.4-9.9 9.4z" />
+    </svg>
   );
 }
 
