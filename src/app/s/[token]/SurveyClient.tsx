@@ -133,6 +133,9 @@ export default function SurveyClient({
 
   const imagesFor = (p: P): string[] => manifest?.[p.imgCode] ?? [];
 
+  // No mostrar productos sin fotos (una vez cargado el manifest).
+  const hasImgs = (p: P): boolean => !manifest || imagesFor(p).length > 0;
+
   const count = Object.keys(selected).length;
 
   function toggle(p: P) {
@@ -165,25 +168,29 @@ export default function SurveyClient({
   const filtered = useMemo(() => {
     const qq = q.trim().toLowerCase();
     return products.filter((p) => {
+      if (!hasImgs(p)) return false;
       if (cat && p.category !== cat) return false;
       if (gen && p.gender !== gen) return false;
       if (qq && !`${p.name} ${p.code}`.toLowerCase().includes(qq)) return false;
       return true;
     });
-  }, [products, q, cat, gen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, q, cat, gen, manifest]);
 
   // Variantes del mismo modelo (mismo nombre, otro código = otra estampa/color)
   // o, si no hay, productos de la misma línea/tejido.
   function recommendFor(p: P): { title: string; items: P[] } {
     const sameModel = products.filter(
-      (x) => x.code !== p.code && x.name === p.name,
+      (x) => x.code !== p.code && x.name === p.name && hasImgs(x),
     );
     if (sameModel.length > 0) {
       return { title: "Otras variantes de este modelo", items: sameModel };
     }
     if (p.line) {
       const sameLine = products
-        .filter((x) => x.code !== p.code && x.line && x.line === p.line)
+        .filter(
+          (x) => x.code !== p.code && x.line && x.line === p.line && hasImgs(x),
+        )
         .sort((a, b) => {
           const ca = a.category === p.category ? 0 : 1;
           const cb = b.category === p.category ? 0 : 1;
@@ -195,7 +202,9 @@ export default function SurveyClient({
       }
     }
     const sameCat = products
-      .filter((x) => x.code !== p.code && x.category === p.category)
+      .filter(
+        (x) => x.code !== p.code && x.category === p.category && hasImgs(x),
+      )
       .slice(0, 10);
     return { title: "También te puede interesar", items: sameCat };
   }
