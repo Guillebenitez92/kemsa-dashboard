@@ -156,19 +156,6 @@ export default function SurveyClient({
     );
   }
 
-  // Dar like eligiendo a la vez el color/foto (cada foto es una variante de color).
-  function likeWithImg(p: P, id: string) {
-    setSelected((prev) => {
-      const cur = prev[p.code];
-      return {
-        ...prev,
-        [p.code]: {
-          size: cur?.size ?? (p.sizes.length === 1 ? p.sizes[0] : ""),
-          favImg: id,
-        },
-      };
-    });
-  }
 
   const byCode = useMemo(
     () => Object.fromEntries(products.map((p) => [p.code, p])),
@@ -531,48 +518,17 @@ export default function SurveyClient({
                 <Price n={p.retail} />
               </button>
 
-              <div className="mt-2.5 flex items-center gap-2">
-                <button
-                  onClick={() => toggle(p)}
-                  aria-label={isSel ? "Quitar me gusta" : "Me gusta"}
-                  className={`shrink-0 rounded-full border w-9 h-9 flex items-center justify-center transition ${
-                    isSel
-                      ? "bg-black text-white border-black"
-                      : "bg-white text-stone-500 border-stone-300 hover:border-stone-900 hover:text-stone-900"
-                  }`}
-                >
-                  <Heart filled={isSel} />
-                </button>
-                {imgs.length > 0 && (
-                  <div className="flex items-center gap-1 overflow-hidden">
-                    {imgs.slice(0, 5).map((id) => (
-                      <button
-                        key={id}
-                        onClick={() => likeWithImg(p, id)}
-                        aria-label="Elegir color"
-                        className={`shrink-0 h-7 w-7 overflow-hidden rounded border ${
-                          sel?.favImg === id
-                            ? "border-black ring-1 ring-black"
-                            : "border-stone-200"
-                        }`}
-                      >
-                        <DriveImg
-                          id={id}
-                          alt="color"
-                          w={80}
-                          className="h-full w-full object-cover"
-                          fallback={<div className="h-full w-full bg-stone-200" />}
-                        />
-                      </button>
-                    ))}
-                    {imgs.length > 5 && (
-                      <span className="text-[10px] text-stone-400 ml-0.5">
-                        +{imgs.length - 5}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
+              <button
+                onClick={() => toggle(p)}
+                aria-label={isSel ? "Quitar me gusta" : "Me gusta"}
+                className={`mt-2.5 rounded-full border w-9 h-9 flex items-center justify-center transition ${
+                  isSel
+                    ? "bg-black text-white border-black"
+                    : "bg-white text-stone-500 border-stone-300 hover:border-stone-900 hover:text-stone-900"
+                }`}
+              >
+                <Heart filled={isSel} />
+              </button>
 
               {isSel && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
