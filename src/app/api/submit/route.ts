@@ -38,7 +38,11 @@ export async function POST(req: NextRequest) {
 
   const rawSel = Array.isArray(body.selections) ? body.selections : [];
   const selections = rawSel
-    .map((s: any) => ({ code: String(s?.code || ""), size: String(s?.size || "") }))
+    .map((s: any) => ({
+      code: String(s?.code || ""),
+      size: String(s?.size || ""),
+      favImg: s?.favImg ? String(s.favImg).slice(0, 80) : null,
+    }))
     .filter((s: { code: string }) => Boolean(productByCode(s.code)))
     .slice(0, 300);
 

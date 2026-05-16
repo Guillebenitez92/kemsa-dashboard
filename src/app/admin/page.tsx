@@ -12,7 +12,30 @@ type Ranking = {
   count: number;
   pct: number;
   sizes: Record<string, number>;
+  favs: Record<string, number>;
 };
+
+function FavThumbs({ favs }: { favs: Record<string, number> }) {
+  const top = Object.entries(favs)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+  if (top.length === 0) return <span className="text-stone-300">—</span>;
+  return (
+    <div className="flex gap-1.5">
+      {top.map(([id, n]) => (
+        <div key={id} className="text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`https://drive.google.com/thumbnail?id=${id}&sz=w120`}
+            alt="fav"
+            className="h-12 w-12 object-cover rounded border border-stone-200 bg-stone-100"
+          />
+          <span className="text-[10px] text-stone-500">{n}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 type Data = {
   total: number;
@@ -199,6 +222,7 @@ export default function AdminPage() {
                   <th className="p-3 text-right">Interesados</th>
                   <th className="p-3 text-right">%</th>
                   <th className="p-3">Talles pedidos</th>
+                  <th className="p-3">Color/foto preferida</th>
                   <th className="p-3 text-right">Costo</th>
                   <th className="p-3 text-right">Retail</th>
                 </tr>
@@ -224,6 +248,9 @@ export default function AdminPage() {
                           .map(([s, n]) => `${s}:${n}`)
                           .join("  ") || "—"}
                       </td>
+                      <td className="p-3">
+                        <FavThumbs favs={r.favs} />
+                      </td>
                       <td className="p-3 text-right text-stone-500">
                         US$ {r.cost.toFixed(2)}
                       </td>
@@ -234,7 +261,7 @@ export default function AdminPage() {
                   ))}
                 {data.ranking.filter((r) => r.count > 0).length === 0 && (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-stone-400">
+                    <td colSpan={9} className="p-8 text-center text-stone-400">
                       Todavía no hay respuestas con este filtro.
                     </td>
                   </tr>

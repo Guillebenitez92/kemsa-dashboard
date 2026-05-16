@@ -86,21 +86,30 @@ de qué quiere comprar la mayoría, antes de decidir tu compra.
 
 ---
 
-## Fotos de los productos (opcional, se agregan después)
+## Fotos de los productos (galería por SKU desde tu Drive)
 
-El catálogo PDF (122 MB / 260 páginas) no permite extraer una foto por
-producto de forma confiable. Por eso ahora cada producto se muestra como
-tarjeta con código, nombre, categoría y precio.
+Las fotos NO se copian al repo (son archivos de 2–13 MB cada una). En su
+lugar, la web las muestra **directo desde tu Google Drive** usando un
+mapeo `public/products/manifest.json` (código de producto → fotos de ese
+SKU: todos los ángulos y colores, tipo galería de e-commerce).
 
-Para agregar fotos cuando las tengas:
+**Importante — compartir la carpeta de Drive:** para que las fotos se vean
+para quien complete la encuesta, la carpeta **"Mormaii training"** (la que
+tiene las imágenes) tiene que estar compartida así:
 
-- Poné cada imagen en la carpeta `public/products/` con el **nombre = código
-  del producto** y extensión `.jpg`. Ejemplo: `public/products/80574.jpg`.
-- Hacé commit/push. La web las muestra automáticamente; las que no tengan
-  foto siguen con el recuadro de color (no se rompe nada).
+1. En Drive, clic derecho sobre la carpeta **Mormaii training → Compartir**.
+2. En "Acceso general" elegí **"Cualquier persona con el enlace"** y rol
+   **"Lector"**. Guardar.
 
-(Si más adelante me pasás una carpeta con las imágenes en archivos chicos,
-las puedo dejar enlazadas yo.)
+Si no la compartís, las tarjetas siguen funcionando pero se ven con el
+recuadro de color en vez de la foto (no se rompe nada).
+
+> Nota: con esto, las fotos del catálogo quedan visibles para quien abra la
+> encuesta. La encuesta en sí sigue protegida por el token; el consolidado
+> solo lo ves vos con contraseña.
+
+El consolidado en `/admin` también muestra, por producto, **qué foto/color
+eligió la gente como favorita** (para tu análisis de compra).
 
 ---
 

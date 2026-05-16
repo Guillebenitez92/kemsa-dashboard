@@ -26,7 +26,7 @@ export type StoredResponse = {
   train_frequency: string;
   buys_where: string | null;
   comment: string | null;
-  selections: { code: string; size: string }[];
+  selections: { code: string; size: string; favImg?: string | null }[];
 };
 
 export async function insertResponse(payload: {
@@ -36,7 +36,7 @@ export async function insertResponse(payload: {
   train_frequency: string;
   buys_where: string | null;
   comment: string | null;
-  selections: { code: string; size: string }[];
+  selections: { code: string; size: string; favImg?: string | null }[];
 }): Promise<void> {
   if (!supabaseConfigured()) {
     throw new Error("Supabase no está configurado (faltan variables de entorno).");

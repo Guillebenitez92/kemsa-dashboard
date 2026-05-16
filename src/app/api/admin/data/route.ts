@@ -36,7 +36,12 @@ export async function GET(req: NextRequest) {
 
   const byProduct = new Map<
     string,
-    { count: number; respondents: Set<string>; sizes: Record<string, number> }
+    {
+      count: number;
+      respondents: Set<string>;
+      sizes: Record<string, number>;
+      favs: Record<string, number>;
+    }
   >();
   let totalSelections = 0;
 
@@ -47,7 +52,7 @@ export async function GET(req: NextRequest) {
       totalSelections++;
       let agg = byProduct.get(s.code);
       if (!agg) {
-        agg = { count: 0, respondents: new Set(), sizes: {} };
+        agg = { count: 0, respondents: new Set(), sizes: {}, favs: {} };
         byProduct.set(s.code, agg);
       }
       if (!seen.has(s.code)) {
@@ -57,6 +62,8 @@ export async function GET(req: NextRequest) {
       agg.respondents.add(r.id);
       const size = s.size || "—";
       agg.sizes[size] = (agg.sizes[size] || 0) + 1;
+      const fav = (s as any).favImg as string | null | undefined;
+      if (fav) agg.favs[fav] = (agg.favs[fav] || 0) + 1;
     }
   }
 
@@ -73,6 +80,7 @@ export async function GET(req: NextRequest) {
       count,
       pct: total ? Math.round((count / total) * 1000) / 10 : 0,
       sizes: agg ? agg.sizes : {},
+      favs: agg ? agg.favs : {},
     };
   }).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 
