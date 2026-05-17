@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { fabricFor } from "@/lib/fabrics";
 
+type Division = "Sports" | "Casual";
+
 type P = {
   code: string;
   imgCode: string;
@@ -12,6 +14,7 @@ type P = {
   retail: number;
   sizes: string[];
   line: string;
+  division: Division;
 };
 
 // Cada color del artículo es una tarjeta independiente del catálogo.
@@ -123,14 +126,15 @@ function DriveImg({
 export default function SurveyClient({
   token,
   products,
-  categories,
 }: {
   token: string;
   products: P[];
-  categories: string[];
   multiplier: number;
 }) {
-  const [step, setStep] = useState<"home" | "catalog" | "form" | "done">("home");
+  const [step, setStep] = useState<
+    "divisions" | "home" | "catalog" | "form" | "done"
+  >("divisions");
+  const [division, setDivision] = useState<Division>("Sports");
   const [selected, setSelected] = useState<Record<string, Sel>>({});
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("");
@@ -189,6 +193,7 @@ export default function SurveyClient({
     if (!manifest) return [];
     const out: Variant[] = [];
     for (const p of products) {
+      if (p.division !== division) continue;
       const imgs = manifest[p.imgCode] ?? [];
       imgs.forEach((img, i) => {
         out.push({
@@ -208,7 +213,17 @@ export default function SurveyClient({
       });
     }
     return out;
-  }, [products, manifest]);
+  }, [products, manifest, division]);
+
+  const catList = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          products.filter((p) => p.division === division).map((p) => p.category),
+        ),
+      ).sort(),
+    [products, division],
+  );
 
   const byVid = useMemo(
     () => Object.fromEntries(variants.map((v) => [v.vid, v])),
@@ -384,6 +399,89 @@ export default function SurveyClient({
     );
   }
 
+  if (step === "divisions") {
+    const pick = (d: Division) => {
+      setDivision(d);
+      setGen("");
+      setCat("");
+      setCol("");
+      setQ("");
+      setStep("home");
+    };
+    const Choice = ({
+      d,
+      label,
+      sub,
+      src,
+    }: {
+      d: Division;
+      label: string;
+      sub: string;
+      src: string;
+    }) => (
+      <button
+        onClick={() => pick(d)}
+        className="relative flex-1 h-[50vh] sm:h-screen overflow-hidden group bg-gradient-to-b from-stone-700 via-stone-900 to-black"
+      >
+        <video
+          src={src}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/55 transition" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+          <span className="text-4xl sm:text-6xl font-semibold tracking-tight">
+            {label}
+          </span>
+          <span className="mt-3 text-xs sm:text-sm tracking-[0.15em] uppercase text-white/80">
+            {sub}
+          </span>
+          <span className="mt-5 text-[11px] uppercase tracking-[0.25em] border-b border-white/80 pb-1">
+            Entrar
+          </span>
+        </div>
+      </button>
+    );
+    return (
+      <main className="relative h-screen w-screen overflow-hidden bg-black">
+        <div className="flex flex-col sm:flex-row h-full">
+          <Choice
+            d="Sports"
+            label="DEPORTIVO"
+            sub="Mormaii Sports · fitness"
+            src="/landing/hombre.mp4"
+          />
+          <Choice
+            d="Casual"
+            label="CASUAL"
+            sub="Mormaii Wear"
+            src="/landing/casual-hombre.mp4"
+          />
+        </div>
+        <div className="absolute top-0 inset-x-0 pt-6 text-center pointer-events-none">
+          <p className="text-[11px] tracking-[0.3em] text-white/80 uppercase">
+            Encuesta de catálogo
+          </p>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-semibold tracking-tight text-white drop-shadow">
+            MORMAII · Verão 27
+          </h1>
+          <p className="mt-1 text-xs text-white/70">Elegí la línea</p>
+        </div>
+      </main>
+    );
+  }
+
+  const isCasual = division === "Casual";
+  const vMujer = isCasual ? "/landing/casual-mujer.mp4" : "/landing/mujer.mp4";
+  const vHombre = isCasual ? "/landing/casual-hombre.mp4" : "/landing/hombre.mp4";
+  const homeTitle = isCasual
+    ? "MORMAII WEAR · Verão 27"
+    : "MORMAII SPORTS · Verão 27";
+
   if (step === "home") {
     const enter = (g: string) => {
       setGen(g);
@@ -403,7 +501,7 @@ export default function SurveyClient({
     }) => (
       <button
         onClick={() => enter(g)}
-        className="relative flex-1 h-[50vh] sm:h-screen overflow-hidden group"
+        className="relative flex-1 h-[50vh] sm:h-screen overflow-hidden group bg-gradient-to-b from-stone-700 via-stone-900 to-black"
       >
         <video
           src={src}
@@ -428,15 +526,21 @@ export default function SurveyClient({
     return (
       <main className="relative h-screen w-screen overflow-hidden bg-black">
         <div className="flex flex-col sm:flex-row h-full">
-          <Cover g="Mujer" label="MUJER" src="/landing/mujer.mp4" />
-          <Cover g="Hombre" label="HOMBRE" src="/landing/hombre.mp4" />
+          <Cover g="Mujer" label="MUJER" src={vMujer} />
+          <Cover g="Hombre" label="HOMBRE" src={vHombre} />
         </div>
+        <button
+          onClick={() => setStep("divisions")}
+          className="absolute top-5 left-5 z-10 text-[11px] uppercase tracking-[0.2em] text-white/90 hover:text-white"
+        >
+          ← Línea
+        </button>
         <div className="absolute top-0 inset-x-0 pt-6 text-center pointer-events-none">
           <p className="text-[11px] tracking-[0.3em] text-white/80 uppercase">
             Encuesta de catálogo
           </p>
           <h1 className="mt-1 text-2xl sm:text-3xl font-semibold tracking-tight text-white drop-shadow">
-            MORMAII SPORTS · Verão 27
+            {homeTitle}
           </h1>
         </div>
         <div className="absolute bottom-0 inset-x-0 pb-6 text-center">
@@ -548,7 +652,7 @@ export default function SurveyClient({
           ← Inicio · Encuesta de catálogo
         </button>
         <h1 className="mt-1 text-3xl sm:text-4xl font-semibold tracking-tight">
-          Mormaii Sports — Verão 27
+          {isCasual ? "Mormaii Wear" : "Mormaii Sports"} — Verão 27
         </h1>
         <p className="text-sm text-stone-500 mt-2 max-w-xl">
           Cada color es una tarjeta aparte, ordenado por colección. Marcá los
@@ -578,7 +682,7 @@ export default function SurveyClient({
             <Pill active={!cat} onClick={() => setCat("")}>
               Todas
             </Pill>
-            {categories.map((c) => (
+            {catList.map((c) => (
               <Pill key={c} active={cat === c} onClick={() => setCat(c)}>
                 {c}
               </Pill>

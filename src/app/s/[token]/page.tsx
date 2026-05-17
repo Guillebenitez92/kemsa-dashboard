@@ -1,4 +1,4 @@
-import { PRODUCTS, CATEGORIES, RETAIL_MULTIPLIER } from "@/lib/products";
+import { PRODUCTS, RETAIL_MULTIPLIER } from "@/lib/products";
 import SurveyClient from "./SurveyClient";
 
 export const dynamic = "force-dynamic";
@@ -29,13 +29,13 @@ export default function SurveyPage({ params }: { params: { token: string } }) {
     retail: p.retail,
     sizes: p.sizes,
     line: p.line,
+    division: p.division,
   }));
 
   return (
     <SurveyClient
       token={params.token}
       products={products}
-      categories={CATEGORIES}
       multiplier={RETAIL_MULTIPLIER}
     />
   );
