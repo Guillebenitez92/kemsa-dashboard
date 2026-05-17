@@ -14,7 +14,23 @@ type P = {
   line: string;
 };
 
-type Sel = { size: string; favImg: string | null };
+// Cada color del artículo es una tarjeta independiente del catálogo.
+type Variant = {
+  vid: string; // `${code}__${img}`
+  code: string;
+  img: string; // Drive id de la foto (= el color)
+  name: string;
+  category: string;
+  gender: string;
+  retail: number;
+  sizes: string[];
+  line: string;
+  imgs: string[]; // todas las fotos/colores del mismo código
+  colorIdx: number; // 1..colorCount
+  colorCount: number;
+};
+
+type Sel = { size: string; code: string; img: string };
 
 const GENDER_OPTS = ["Femenino", "Masculino", "Otro", "Prefiero no decir"];
 const AGE_OPTS = ["Menos de 18", "18-24", "25-34", "35-44", "45-54", "55+"];
@@ -26,6 +42,8 @@ const FREQ_OPTS = [
 ];
 
 const USD_PYG = 6500;
+
+const SIN_COLECCION = "Otras prendas";
 
 // Grupo de talle por tipo de prenda: el talle elegido se recuerda por grupo
 // (ej: ponés M en una de arriba → las próximas de arriba ya vienen con M).
@@ -117,9 +135,9 @@ export default function SurveyClient({
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("");
   const [gen, setGen] = useState("");
+  const [col, setCol] = useState("");
   const [manifest, setManifest] = useState<Record<string, string[]> | null>(null);
-  const [openCode, setOpenCode] = useState<string | null>(null);
-  const [gIdx, setGIdx] = useState(0);
+  const [openVid, setOpenVid] = useState<string | null>(null);
   const [sizeByGroup, setSizeByGroup] = useState<Record<string, string>>({});
 
   const [name, setName] = useState("");
@@ -131,7 +149,8 @@ export default function SurveyClient({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const selKey = `kemsa_sel_${token}`;
+  // v2: el modelo de selección cambió (ahora por color, no por código).
+  const selKey = `kemsa_sel2_${token}`;
   const doneKey = `kemsa_done_${token}`;
   const sizesKey = `kemsa_sizes_${token}`;
 
@@ -165,92 +184,134 @@ export default function SurveyClient({
       .catch(() => {});
   }, []);
 
-  const imagesFor = (p: P): string[] => manifest?.[p.imgCode] ?? [];
+  // Una tarjeta por cada color (cada foto del manifest) de cada artículo.
+  const variants = useMemo<Variant[]>(() => {
+    if (!manifest) return [];
+    const out: Variant[] = [];
+    for (const p of products) {
+      const imgs = manifest[p.imgCode] ?? [];
+      imgs.forEach((img, i) => {
+        out.push({
+          vid: `${p.code}__${img}`,
+          code: p.code,
+          img,
+          name: p.name,
+          category: p.category,
+          gender: p.gender,
+          retail: p.retail,
+          sizes: p.sizes,
+          line: p.line,
+          imgs,
+          colorIdx: i + 1,
+          colorCount: imgs.length,
+        });
+      });
+    }
+    return out;
+  }, [products, manifest]);
 
-  // No mostrar productos sin fotos (una vez cargado el manifest).
-  const hasImgs = (p: P): boolean => !manifest || imagesFor(p).length > 0;
+  const byVid = useMemo(
+    () => Object.fromEntries(variants.map((v) => [v.vid, v])),
+    [variants],
+  );
+
+  const collections = useMemo(() => {
+    const s = new Set<string>();
+    for (const v of variants) if (v.line) s.add(v.line);
+    return Array.from(s).sort((a, b) => a.localeCompare(b, "es"));
+  }, [variants]);
 
   const count = Object.keys(selected).length;
 
-  function toggle(p: P) {
+  function toggle(v: Variant) {
     setSelected((prev) => {
       const next = { ...prev };
-      if (next[p.code]) {
-        delete next[p.code];
+      if (next[v.vid]) {
+        delete next[v.vid];
       } else {
-        const remembered = sizeByGroup[groupOf(p.category)];
-        next[p.code] = {
+        const remembered = sizeByGroup[groupOf(v.category)];
+        next[v.vid] = {
           size:
-            p.sizes.length === 1
-              ? p.sizes[0]
-              : remembered && p.sizes.includes(remembered)
+            v.sizes.length === 1
+              ? v.sizes[0]
+              : remembered && v.sizes.includes(remembered)
               ? remembered
               : "",
-          favImg: null,
+          code: v.code,
+          img: v.img,
         };
       }
       return next;
     });
   }
 
-  function patch(code: string, p: Partial<Sel>) {
+  function patch(vid: string, p: Partial<Sel>) {
     setSelected((prev) =>
-      prev[code] ? { ...prev, [code]: { ...prev[code], ...p } } : prev,
+      prev[vid] ? { ...prev, [vid]: { ...prev[vid], ...p } } : prev,
     );
   }
 
   // Elegir talle y recordarlo para todas las prendas del mismo grupo.
-  function rememberSize(p: P, s: string) {
-    patch(p.code, { size: s });
-    setSizeByGroup((prev) => ({ ...prev, [groupOf(p.category)]: s }));
+  function rememberSize(v: Variant, s: string) {
+    patch(v.vid, { size: s });
+    setSizeByGroup((prev) => ({ ...prev, [groupOf(v.category)]: s }));
   }
-
-
-  const byCode = useMemo(
-    () => Object.fromEntries(products.map((p) => [p.code, p])),
-    [products],
-  );
 
   const filtered = useMemo(() => {
     const qq = q.trim().toLowerCase();
-    return products.filter((p) => {
-      if (!hasImgs(p)) return false;
-      if (cat && p.category !== cat) return false;
-      if (gen && p.gender !== gen) return false;
-      if (qq && !`${p.name} ${p.code}`.toLowerCase().includes(qq)) return false;
+    return variants.filter((v) => {
+      if (cat && v.category !== cat) return false;
+      if (gen && v.gender !== gen) return false;
+      if (col && (v.line || SIN_COLECCION) !== col) return false;
+      if (qq && !`${v.name} ${v.code}`.toLowerCase().includes(qq)) return false;
       return true;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [products, q, cat, gen, manifest]);
+  }, [variants, q, cat, gen, col]);
 
-  // Variantes del mismo modelo (mismo nombre, otro código = otra estampa/color)
-  // o, si no hay, productos de la misma línea/tejido.
-  function recommendFor(p: P): { title: string; items: P[] } {
-    const sameModel = products.filter(
-      (x) => x.code !== p.code && x.name === p.name && hasImgs(x),
-    );
-    if (sameModel.length > 0) {
-      return { title: "Otras variantes de este modelo", items: sameModel };
+  // Catálogo ordenado/agrupado por colección de productos.
+  const groups = useMemo(() => {
+    const m = new Map<string, Variant[]>();
+    for (const v of filtered) {
+      const key = v.line || SIN_COLECCION;
+      const arr = m.get(key);
+      if (arr) arr.push(v);
+      else m.set(key, [v]);
     }
-    if (p.line) {
-      const sameLine = products
-        .filter(
-          (x) => x.code !== p.code && x.line && x.line === p.line && hasImgs(x),
-        )
+    const keys = Array.from(m.keys()).sort((a, b) => {
+      if (a === SIN_COLECCION) return 1;
+      if (b === SIN_COLECCION) return -1;
+      return a.localeCompare(b, "es");
+    });
+    return keys.map((k) => ({ line: k, items: m.get(k)! }));
+  }, [filtered]);
+
+  // Una variante "representativa" por código, para las recomendaciones.
+  const reps = useMemo(() => {
+    const m = new Map<string, Variant>();
+    for (const v of variants) if (!m.has(v.code)) m.set(v.code, v);
+    return Array.from(m.values());
+  }, [variants]);
+
+  function recommendFor(v: Variant): { title: string; items: Variant[] } {
+    const sameModel = reps.filter((x) => x.code !== v.code && x.name === v.name);
+    if (sameModel.length > 0) {
+      return { title: "Otras versiones de este modelo", items: sameModel.slice(0, 10) };
+    }
+    if (v.line) {
+      const sameLine = reps
+        .filter((x) => x.code !== v.code && x.line && x.line === v.line)
         .sort((a, b) => {
-          const ca = a.category === p.category ? 0 : 1;
-          const cb = b.category === p.category ? 0 : 1;
+          const ca = a.category === v.category ? 0 : 1;
+          const cb = b.category === v.category ? 0 : 1;
           return ca - cb;
         })
         .slice(0, 10);
       if (sameLine.length > 0) {
-        return { title: `También en línea ${p.line}`, items: sameLine };
+        return { title: `Más de la colección ${v.line}`, items: sameLine };
       }
     }
-    const sameCat = products
-      .filter(
-        (x) => x.code !== p.code && x.category === p.category && hasImgs(x),
-      )
+    const sameCat = reps
+      .filter((x) => x.code !== v.code && x.category === v.category)
       .slice(0, 10);
     return { title: "También te puede interesar", items: sameCat };
   }
@@ -263,7 +324,7 @@ export default function SurveyClient({
     }
     const missingSize = Object.entries(selected).find(([, s]) => !s.size);
     if (missingSize) {
-      setError("Elegí el talle en todos los productos marcados.");
+      setError("Elegí el talle en todos los colores marcados.");
       setStep("catalog");
       return;
     }
@@ -284,10 +345,11 @@ export default function SurveyClient({
           train_frequency: freq,
           buys_where: buys || null,
           comment: comment || null,
-          selections: Object.entries(selected).map(([code, s]) => ({
-            code,
+          // Una fila por color marcado: el color va en favImg.
+          selections: Object.values(selected).map((s) => ({
+            code: s.code,
             size: s.size,
-            favImg: s.favImg,
+            favImg: s.img,
           })),
         }),
       });
@@ -326,6 +388,7 @@ export default function SurveyClient({
     const enter = (g: string) => {
       setGen(g);
       setCat("");
+      setCol("");
       setQ("");
       setStep("catalog");
     };
@@ -467,11 +530,13 @@ export default function SurveyClient({
     );
   }
 
-  const openP = openCode ? byCode[openCode] : null;
-  const openImgs = openP ? imagesFor(openP) : [];
-  const openSel = openCode ? selected[openCode] : undefined;
-  const reco = openP ? recommendFor(openP) : null;
-  const fab = openP ? fabricFor(openP.line) : undefined;
+  const openV = openVid ? byVid[openVid] : null;
+  const openSel = openVid ? selected[openVid] : undefined;
+  const otrosColores = openV
+    ? variants.filter((x) => x.code === openV.code && x.vid !== openV.vid)
+    : [];
+  const reco = openV ? recommendFor(openV) : null;
+  const fab = openV ? fabricFor(openV.line) : undefined;
 
   return (
     <main className="min-h-screen pb-28 bg-white">
@@ -486,8 +551,8 @@ export default function SurveyClient({
           Mormaii Sports — Verão 27
         </h1>
         <p className="text-sm text-stone-500 mt-2 max-w-xl">
-          Tocá un producto para ver todas sus fotos y variantes. Marcá lo que
-          comprarías, elegí el talle y la foto/color que más te gusta.
+          Cada color es una tarjeta aparte, ordenado por colección. Marcá los
+          colores que comprarías y elegí el talle.
         </p>
       </header>
 
@@ -499,6 +564,16 @@ export default function SurveyClient({
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
+          <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-1 px-1">
+            <Pill active={!col} onClick={() => setCol("")}>
+              Todas las colecciones
+            </Pill>
+            {collections.map((c) => (
+              <Pill key={c} active={col === c} onClick={() => setCol(c)}>
+                {c}
+              </Pill>
+            ))}
+          </div>
           <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-1 px-1">
             <Pill active={!cat} onClick={() => setCat("")}>
               Todas
@@ -520,111 +595,132 @@ export default function SurveyClient({
       </div>
 
       <div className="px-5 pt-3 text-xs text-stone-400">
-        {filtered.length} producto{filtered.length === 1 ? "" : "s"}
+        {manifest === null
+          ? "Cargando catálogo…"
+          : `${filtered.length} ${filtered.length === 1 ? "color" : "colores"} · ${
+              groups.length
+            } ${groups.length === 1 ? "colección" : "colecciones"}`}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 px-5 py-5">
-        {filtered.map((p) => {
-          const sel = selected[p.code];
-          const isSel = Boolean(sel);
-          const imgs = imagesFor(p);
-          const placeholder = (
-            <div className="aspect-[3/4] w-full bg-stone-50 flex flex-col items-center justify-center text-stone-300">
-              <span className="text-[11px] font-medium uppercase tracking-wide">
-                {p.category}
+      {manifest === null ? (
+        <div className="px-5 py-24 text-center text-stone-400">
+          Cargando catálogo…
+        </div>
+      ) : groups.length === 0 ? (
+        <p className="px-5 py-16 text-center text-stone-400">
+          No hay productos con ese filtro.
+        </p>
+      ) : (
+        groups.map((grp) => (
+          <section key={grp.line}>
+            <div className="px-5 pt-7 pb-1 flex items-baseline justify-between">
+              <h2 className="text-lg sm:text-xl font-semibold tracking-tight">
+                {grp.line}
+              </h2>
+              <span className="text-[11px] uppercase tracking-wide text-stone-400">
+                {grp.items.length}{" "}
+                {grp.items.length === 1 ? "color" : "colores"}
               </span>
-              <span className="text-[10px] mt-1">#{p.code}</span>
             </div>
-          );
-          return (
-            <div key={p.code} className="flex flex-col">
-              <button
-                onClick={() => {
-                  setOpenCode(p.code);
-                  setGIdx(0);
-                }}
-                className="block w-full text-left relative group"
-              >
-                <div
-                  className={`overflow-hidden ${
-                    isSel ? "ring-1 ring-black" : ""
-                  }`}
-                >
-                  <DriveImg
-                    id={imgs[0] || ""}
-                    alt={p.name}
-                    w={600}
-                    className="aspect-[3/4] w-full object-cover bg-stone-50"
-                    fallback={placeholder}
-                  />
-                </div>
-                {imgs.length > 1 && (
-                  <span className="absolute top-2 right-2 bg-white/85 text-stone-700 text-[10px] px-2 py-0.5 rounded-full">
-                    {imgs.length} fotos
-                  </span>
-                )}
-                <div className="mt-2.5 flex items-center gap-2 text-[10px] uppercase tracking-wide text-stone-400">
-                  <span>{p.gender}</span>
-                  {p.line && <span>· {p.line}</span>}
-                </div>
-                <p className="text-[13px] leading-snug mt-1 line-clamp-2 min-h-[2.4rem] text-stone-800">
-                  {p.name}
-                </p>
-                <Price n={p.retail} />
-              </button>
-
-              <button
-                onClick={() => toggle(p)}
-                aria-label={isSel ? "Quitar me gusta" : "Me gusta"}
-                className={`mt-2.5 rounded-full border w-9 h-9 flex items-center justify-center transition ${
-                  isSel
-                    ? "bg-black text-white border-black"
-                    : "bg-white text-stone-500 border-stone-300 hover:border-stone-900 hover:text-stone-900"
-                }`}
-              >
-                <Heart filled={isSel} />
-              </button>
-
-              {isSel && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {p.sizes.map((s) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 px-5 py-4">
+              {grp.items.map((v) => {
+                const sel = selected[v.vid];
+                const isSel = Boolean(sel);
+                const placeholder = (
+                  <div className="aspect-[3/4] w-full bg-stone-50 flex flex-col items-center justify-center text-stone-300">
+                    <span className="text-[11px] font-medium uppercase tracking-wide">
+                      {v.category}
+                    </span>
+                    <span className="text-[10px] mt-1">#{v.code}</span>
+                  </div>
+                );
+                return (
+                  <div key={v.vid} className="flex flex-col">
                     <button
-                      key={s}
-                      onClick={() => rememberSize(p, s)}
-                      className={`min-w-[34px] text-[11px] px-2 py-1 border ${
-                        sel?.size === s
+                      onClick={() => setOpenVid(v.vid)}
+                      className="block w-full text-left relative group"
+                    >
+                      <div
+                        className={`overflow-hidden ${
+                          isSel ? "ring-1 ring-black" : ""
+                        }`}
+                      >
+                        <DriveImg
+                          id={v.img}
+                          alt={v.name}
+                          w={600}
+                          className="aspect-[3/4] w-full object-cover bg-stone-50"
+                          fallback={placeholder}
+                        />
+                      </div>
+                      {v.colorCount > 1 && (
+                        <span className="absolute top-2 right-2 bg-white/85 text-stone-700 text-[10px] px-2 py-0.5 rounded-full">
+                          Color {v.colorIdx}/{v.colorCount}
+                        </span>
+                      )}
+                      <div className="mt-2.5 flex items-center gap-2 text-[10px] uppercase tracking-wide text-stone-400">
+                        <span>{v.gender}</span>
+                        {v.line && <span>· {v.line}</span>}
+                      </div>
+                      <p className="text-[13px] leading-snug mt-1 line-clamp-2 min-h-[2.4rem] text-stone-800">
+                        {v.name}
+                      </p>
+                      <Price n={v.retail} />
+                    </button>
+
+                    <button
+                      onClick={() => toggle(v)}
+                      aria-label={isSel ? "Quitar me gusta" : "Me gusta"}
+                      className={`mt-2.5 rounded-full border w-9 h-9 flex items-center justify-center transition ${
+                        isSel
                           ? "bg-black text-white border-black"
-                          : "bg-white text-stone-600 border-stone-300"
+                          : "bg-white text-stone-500 border-stone-300 hover:border-stone-900 hover:text-stone-900"
                       }`}
                     >
-                      {s}
+                      <Heart filled={isSel} />
                     </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-        {filtered.length === 0 && (
-          <p className="col-span-full text-center text-stone-400 py-16">
-            No hay productos con ese filtro.
-          </p>
-        )}
-      </div>
 
-      {openP && (
+                    {isSel && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {v.sizes.map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => rememberSize(v, s)}
+                            className={`min-w-[34px] text-[11px] px-2 py-1 border ${
+                              sel?.size === s
+                                ? "bg-black text-white border-black"
+                                : "bg-white text-stone-600 border-stone-300"
+                            }`}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))
+      )}
+
+      {openV && (
         <div className="fixed inset-0 z-40 bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-6">
           <div className="bg-white w-full sm:max-w-xl sm:rounded-2xl max-h-[94vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100 sticky top-0 bg-white z-10">
               <div className="min-w-0 pr-3">
-                <p className="font-medium text-sm truncate">{openP.name}</p>
+                <p className="font-medium text-sm truncate">{openV.name}</p>
                 <p className="text-[11px] text-stone-400 mt-0.5">
-                  #{openP.code}
-                  {openP.line ? ` · ${openP.line}` : ""}
+                  #{openV.code}
+                  {openV.line ? ` · ${openV.line}` : ""}
+                  {openV.colorCount > 1
+                    ? ` · Color ${openV.colorIdx} de ${openV.colorCount}`
+                    : ""}
                 </p>
               </div>
               <button
-                onClick={() => setOpenCode(null)}
+                onClick={() => setOpenVid(null)}
                 className="text-stone-400 text-xl leading-none px-1"
                 aria-label="Cerrar"
               >
@@ -633,77 +729,20 @@ export default function SurveyClient({
             </div>
 
             <div className="p-5">
-              {openImgs.length === 0 ? (
-                <div className="aspect-square w-full bg-stone-50 flex items-center justify-center text-stone-400 text-sm">
-                  Sin fotos para este producto
-                </div>
-              ) : (
-                <>
-                  <div className="relative">
-                    <DriveImg
-                      id={openImgs[gIdx]}
-                      alt={openP.name}
-                      w={1200}
-                      className="w-full object-contain bg-stone-50 max-h-[56vh]"
-                      fallback={
-                        <div className="aspect-square w-full bg-stone-50" />
-                      }
-                    />
-                    {openImgs.length > 1 && (
-                      <>
-                        <button
-                          onClick={() =>
-                            setGIdx(
-                              (i) => (i - 1 + openImgs.length) % openImgs.length,
-                            )
-                          }
-                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 border border-stone-200 rounded-full w-9 h-9 text-lg"
-                        >
-                          ‹
-                        </button>
-                        <button
-                          onClick={() => setGIdx((i) => (i + 1) % openImgs.length)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 border border-stone-200 rounded-full w-9 h-9 text-lg"
-                        >
-                          ›
-                        </button>
-                        <span className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white/85 text-stone-600 text-[11px] px-2 py-0.5 rounded-full">
-                          {gIdx + 1} / {openImgs.length}
-                        </span>
-                      </>
-                    )}
-                  </div>
-
-                  {openImgs.length > 1 && (
-                    <div className="flex gap-2 overflow-x-auto mt-3 pb-1">
-                      {openImgs.map((id, i) => (
-                        <button
-                          key={id}
-                          onClick={() => setGIdx(i)}
-                          className={`shrink-0 overflow-hidden border ${
-                            i === gIdx ? "border-black" : "border-stone-200"
-                          }`}
-                        >
-                          <DriveImg
-                            id={id}
-                            alt={`${openP.name} ${i + 1}`}
-                            w={200}
-                            className="h-16 w-16 object-cover bg-stone-50"
-                            fallback={<div className="h-16 w-16 bg-stone-50" />}
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
+              <DriveImg
+                id={openV.img}
+                alt={openV.name}
+                w={1200}
+                className="w-full object-contain bg-stone-50 max-h-[56vh]"
+                fallback={<div className="aspect-square w-full bg-stone-50" />}
+              />
 
               <div className="mt-4">
-                <Price n={openP.retail} big />
+                <Price n={openV.retail} big />
               </div>
 
               <button
-                onClick={() => toggle(openP)}
+                onClick={() => toggle(openV)}
                 className={`mt-4 w-full rounded-full py-3 text-sm font-medium border flex items-center justify-center gap-2 ${
                   openSel
                     ? "bg-black text-white border-black"
@@ -711,7 +750,7 @@ export default function SurveyClient({
                 }`}
               >
                 <Heart filled={!!openSel} className="w-4 h-4" />
-                {openSel ? "Te gusta" : "Me gusta"}
+                {openSel ? "Te gusta este color" : "Me gusta este color"}
               </button>
 
               {openSel && (
@@ -720,10 +759,10 @@ export default function SurveyClient({
                     Talle
                   </p>
                   <div className="flex flex-wrap gap-1.5 mt-2">
-                    {openP.sizes.map((s) => (
+                    {openV.sizes.map((s) => (
                       <button
                         key={s}
-                        onClick={() => rememberSize(openP, s)}
+                        onClick={() => rememberSize(openV, s)}
                         className={`min-w-[40px] text-xs px-3 py-2 border ${
                           openSel.size === s
                             ? "bg-black text-white border-black"
@@ -734,29 +773,38 @@ export default function SurveyClient({
                       </button>
                     ))}
                   </div>
-
-                  {openImgs.length > 0 && (
-                    <button
-                      onClick={() =>
-                        patch(openP.code, {
-                          favImg:
-                            openSel.favImg === openImgs[gIdx]
-                              ? null
-                              : openImgs[gIdx],
-                        })
-                      }
-                      className={`mt-4 w-full rounded-full py-3 text-sm font-medium border ${
-                        openSel.favImg === openImgs[gIdx]
-                          ? "bg-stone-900 border-stone-900 text-white"
-                          : "bg-white border-stone-300 text-stone-700"
-                      }`}
-                    >
-                      {openSel.favImg === openImgs[gIdx]
-                        ? "★ Esta foto/color es mi favorita"
-                        : "☆ Marcar esta foto/color como favorita"}
-                    </button>
-                  )}
                 </>
+              )}
+
+              {otrosColores.length > 0 && (
+                <div className="mt-7 border-t border-stone-100 pt-5">
+                  <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">
+                    Otros colores de este artículo
+                  </p>
+                  <div className="flex gap-3 overflow-x-auto mt-3 pb-1">
+                    {otrosColores.map((c) => {
+                      const cSel = Boolean(selected[c.vid]);
+                      return (
+                        <button
+                          key={c.vid}
+                          onClick={() => setOpenVid(c.vid)}
+                          className={`shrink-0 overflow-hidden border ${
+                            cSel ? "border-black" : "border-stone-200"
+                          }`}
+                          title={`Color ${c.colorIdx} de ${c.colorCount}`}
+                        >
+                          <DriveImg
+                            id={c.img}
+                            alt={`${c.name} color ${c.colorIdx}`}
+                            w={200}
+                            className="h-20 w-20 object-cover bg-stone-50"
+                            fallback={<div className="h-20 w-20 bg-stone-50" />}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
 
               {fab && (
@@ -801,15 +849,11 @@ export default function SurveyClient({
                   </p>
                   <div className="flex gap-3 overflow-x-auto mt-3 pb-1">
                     {reco.items.map((r) => {
-                      const rImgs = imagesFor(r);
-                      const rSel = Boolean(selected[r.code]);
+                      const rSel = Boolean(selected[r.vid]);
                       return (
                         <button
-                          key={r.code}
-                          onClick={() => {
-                            setOpenCode(r.code);
-                            setGIdx(0);
-                          }}
+                          key={r.vid}
+                          onClick={() => setOpenVid(r.vid)}
                           className="shrink-0 w-28 text-left"
                         >
                           <div
@@ -818,7 +862,7 @@ export default function SurveyClient({
                             }`}
                           >
                             <DriveImg
-                              id={rImgs[0] || ""}
+                              id={r.img}
                               alt={r.name}
                               w={300}
                               className="aspect-[3/4] w-full object-cover bg-stone-50"
@@ -843,7 +887,7 @@ export default function SurveyClient({
               )}
 
               <button
-                onClick={() => setOpenCode(null)}
+                onClick={() => setOpenVid(null)}
                 className="mt-6 w-full rounded-full py-3 text-sm bg-black text-white font-medium"
               >
                 Listo
@@ -858,7 +902,7 @@ export default function SurveyClient({
           <div className="text-sm text-stone-600 flex items-center gap-1.5">
             <Heart filled className="w-4 h-4 text-stone-900" />
             <span className="font-semibold text-stone-900">{count}</span>{" "}
-            Me gusta
+            {count === 1 ? "color marcado" : "colores marcados"}
           </div>
           <button
             disabled={count === 0}
