@@ -109,3 +109,168 @@ export function fabricFor(line: string | undefined): Fabric | undefined {
   if (!line) return undefined;
   return FABRIC[line];
 }
+
+// --- Casual / WEAR -------------------------------------------------------
+// El "line" de Casual es la categoría, no la tela. La tela está en el nombre
+// del producto. Info de "MORMAII - Guia de Malhas 2026.pdf" (la mayoría del
+// PDF es imagen/fuente incrustada; sólo "Malha Porto" salió como texto, va
+// textual) + propiedades estándar de cada tejido. Sin videos: en Drive sólo
+// hay videos de malha de Sports (Mary y Power Comfy).
+
+const F_PORTO: Fabric = {
+  name: "Malha Porto",
+  tagline: "Modernidad y sofisticación",
+  features: ["Textura cuadriculada en relieve", "Toque agradable", "Caída estructurada"],
+  desc: "Traduce modernidad y sofisticación, con su construcción en relieve y textura cuadriculada. Desarrollada en telar circular, presenta un toque agradable, uniendo resistencia, confort y caída estructurada. Base versátil que valoriza el diseño de las prendas.",
+};
+const F_ESTRUCTURADA: Fabric = {
+  name: "Malha estructurada",
+  tagline: "Tejido jacquard con relieve",
+  features: ["Textura en relieve", "Telar circular", "Caída prolija", "Look premium"],
+  desc: "Familia de mallas estructuradas tipo jacquard tejidas en telar circular, con textura en relieve y toque agradable. Aportan personalidad, caída prolija y un acabado premium a la prenda.",
+};
+const F_MALHAO: Fabric = {
+  name: "Malhão",
+  tagline: "Punto grueso, caída premium",
+  features: ["Encorpado", "Caída estructurada", "Look over"],
+  desc: "Punto más grueso y encorpado que da cuerpo y una caída premium a la prenda, ideal para un look estructurado u oversized con mucho confort.",
+};
+const F_PELETIZADA: Fabric = {
+  name: "Malha peletizada",
+  tagline: "Micro-textura, toque seco",
+  features: ["Superficie micro-texturada", "Toque seco", "Acabado sofisticado"],
+  desc: "Meia malha peinada con acabado peletizado: una micro-textura en la superficie que aporta toque seco y un acabado más sofisticado que el algodón liso.",
+};
+const F_DUPLA_FACE: Fabric = {
+  name: "Doble faz",
+  tagline: "Dos caras, más cuerpo",
+  features: ["Doble cara", "Más estructura", "Abrigo liviano"],
+  desc: "Malla de doble faz (dos caras), que aporta más cuerpo, estructura y un abrigo liviano, manteniendo el confort.",
+};
+const F_RAJADA: Fabric = {
+  name: "Malha Rajada Dry",
+  tagline: "Jaspeada con tecnología dry",
+  features: ["Secado rápido", "Transpirable", "Aspecto jaspeado"],
+  desc: "Malla con aspecto jaspeado (rajado) y tecnología Dry: secado rápido y buena transpirabilidad para mantener el cuerpo seco y confortable.",
+};
+const F_HELANCA_DIAG: Fabric = {
+  name: "Helanca Diagonal",
+  tagline: "Textura diagonal, dry",
+  features: ["Textura diagonal", "Secado rápido", "Resistente al uso"],
+  desc: "Variante de la helanca con textura en diagonal y tecnología dry: visual deportivo, resistencia al uso y secado rápido.",
+};
+const F_SUEDINE: Fabric = {
+  name: "Suedine",
+  tagline: "Toque durazno aterciopelado",
+  features: ["Tacto peach skin", "Suave", "Confortable"],
+  desc: "Tejido con acabado tipo durazno (peach skin): superficie aterciopelada, muy suave al tacto y confortable, con buena caída.",
+};
+const F_MODAL: Fabric = {
+  name: "Modal",
+  tagline: "Suavidad fluida y fresca",
+  features: ["Fibra de celulosa", "Muy suave", "Fresco y fluido"],
+  desc: "Fibra de celulosa de tacto súper suave, con caída fluida y sensación fresca en la piel. Más sedoso y liviano que el algodón común.",
+};
+const F_PIQUET: Fabric = {
+  name: "Piquet",
+  tagline: "Clásico de la polo",
+  features: ["Tejido panal", "Fresco", "Estructurado"],
+  desc: "Tejido con textura tipo panal/pico, clásico de la camisa polo. Estructurado y fresco, mantiene la forma y aporta un acabado prolijo.",
+};
+const F_SARJA: Fabric = {
+  name: "Sarja",
+  tagline: "Resistente y estructurada",
+  features: ["Tejido plano diagonal", "Resistente", "Caída con cuerpo"],
+  desc: "Tejido plano con trama diagonal (gabardina/sarga), resistente y con cuerpo. Ideal para pantalón y bermuda: estructura, durabilidad y caída prolija.",
+};
+const F_JEANS: Fabric = {
+  name: "Jeans / Denim",
+  tagline: "Atemporal y resistente",
+  features: ["Algodón sarga índigo", "Resistente", "Versátil"],
+  desc: "Denim de algodón en sarga índigo: resistente, durable y atemporal. La base versátil que combina con todo.",
+};
+const F_LINHO: Fabric = {
+  name: "Linho",
+  tagline: "Fresco y natural",
+  features: ["Muy transpirable", "Caída natural", "Look alfaiataria"],
+  desc: "Lino (o mezcla con lino): tejido fresco y altamente transpirable, de caída natural y aspecto noble, ideal para un look alfaiataria de verano.",
+};
+const F_MOLETINHO: Fabric = {
+  name: "Moletinho",
+  tagline: "Friza liviana y suave",
+  features: ["Friza liviana", "Toque suave", "Confort diario"],
+  desc: "Moletón liviano (moletinho): friza fina y suave, abrigo ligero y mucho confort para el día a día.",
+};
+const F_MOLETOM: Fabric = {
+  name: "Moletom",
+  tagline: "Abrigo suave y cómodo",
+  features: ["Friza interna", "Abrigo", "Confortable"],
+  desc: "Moletón con friza interna: abrigo suave, comodidad y caída con cuerpo. Ideal para bermudas y prendas de descanso/urbanas.",
+};
+const F_TACTEL: Fabric = {
+  name: "Tactel Hydronatic",
+  tagline: "Liviano y secado ultrarrápido",
+  features: ["Hidrofóbico", "Secado ultrarrápido", "Súper liviano"],
+  desc: "Nylon tactel con tecnología Hydronatic: súper liviano, hidrofóbico y de secado ultrarrápido. Pensado para boardshorts y volley shorts: del agua a la calle sin esfuerzo.",
+};
+const F_NEOPRENE: Fabric = {
+  name: "Neoprene",
+  tagline: "Cuerpo que modela",
+  features: ["Estructura y cuerpo", "Modela la silueta", "Abrigo"],
+  desc: "Tejido con cuerpo tipo neoprene: estructura que modela la silueta y aporta un abrigo liviano, manteniendo la forma de la prenda.",
+};
+const F_LORCA: Fabric = {
+  name: "Malha Lorca",
+  tagline: "Caída fluida con estructura",
+  features: ["Caída fluida", "Estructura sutil", "Look moderno"],
+  desc: "Malla Lorca: combina caída fluida con una estructura sutil que valoriza la silueta, para un look moderno y confortable.",
+};
+const F_SUPLEX: Fabric = {
+  name: "Suplex",
+  tagline: "Elástico y resistente",
+  features: ["Buena elasticidad", "Recuperación", "Toque liso"],
+  desc: "Poliéster texturizado tipo suplex: buena elasticidad y recuperación, superficie lisa y resistente, con cobertura y confort en el uso.",
+};
+const F_MEIA_MALHA: Fabric = {
+  name: "Meia Malha Penteada",
+  tagline: "Algodón peinado del día a día",
+  features: ["Algodón peinado", "Toque macio", "Versátil"],
+  desc: "Meia malha de algodón peinado: el básico del día a día. Toque suave y agradable, confortable y versátil para cualquier ocasión.",
+};
+
+const CASUAL_FABRIC_RULES: [RegExp, Fabric][] = [
+  [/MALHA PORTO/, F_PORTO],
+  [
+    /(DUBLIN|COREIA|ARUBA|NANTES|INDIA|EGITO|POSITANO|VENEZA|NORONHA|VIENA|TOQUIO|IBIZA|FLORIDA|POLILINHO|WAFFLE|LINHO COLOR)/,
+    F_ESTRUCTURADA,
+  ],
+  [/MALHAO/, F_MALHAO],
+  [/PELETIZADA/, F_PELETIZADA],
+  [/DUPLA FACE/, F_DUPLA_FACE],
+  [/RAJADA/, F_RAJADA],
+  [/MALHA FURADINHA|FURADINHA DRY/, FABRIC["Malha Furadinha"]],
+  [/HELANCA DIAGONAL/, F_HELANCA_DIAG],
+  [/HELANCA/, FABRIC["Helanca Dry"]],
+  [/SUEDINE/, F_SUEDINE],
+  [/MODAL/, F_MODAL],
+  [/PIQUET/, F_PIQUET],
+  [/SARJA|CARGO|CHINO/, F_SARJA],
+  [/JEANS|DENIM/, F_JEANS],
+  [/LINHO/, F_LINHO],
+  [/MOLETINHO/, F_MOLETINHO],
+  [/MOLETOM/, F_MOLETOM],
+  [/TACTEL|HYDRONATIC|HIDRONATIC|RIPSTOP|CUPRO|BOARD/, F_TACTEL],
+  [/NEOPRENE/, F_NEOPRENE],
+  [/LORCA/, F_LORCA],
+  [/SUPLEX/, F_SUPLEX],
+  [/RIBANA/, FABRIC["Ribana"]],
+  [/COTTON/, FABRIC["Malha Cotton"]],
+  [/M\/M|MEIA MALHA|\bPENT\b/, F_MEIA_MALHA],
+];
+
+export function casualFabricFor(rawName: string | undefined): Fabric | undefined {
+  if (!rawName) return undefined;
+  const d = rawName.toUpperCase();
+  for (const [re, f] of CASUAL_FABRIC_RULES) if (re.test(d)) return f;
+  return undefined;
+}

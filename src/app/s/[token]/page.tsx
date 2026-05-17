@@ -24,6 +24,7 @@ export default function SurveyPage({ params }: { params: { token: string } }) {
     code: p.code,
     imgCode: p.imgCode,
     name: p.name,
+    rawName: p.rawName,
     category: p.category,
     gender: p.gender,
     retail: p.retail,

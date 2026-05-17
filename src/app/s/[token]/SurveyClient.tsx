@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { fabricFor } from "@/lib/fabrics";
+import { fabricFor, casualFabricFor } from "@/lib/fabrics";
 
 type Division = "Sports" | "Casual";
 
@@ -9,6 +9,7 @@ type P = {
   code: string;
   imgCode: string;
   name: string;
+  rawName: string;
   category: string;
   gender: string;
   retail: number;
@@ -594,7 +595,11 @@ export default function SurveyClient({
   const openImgs = openP ? imagesFor(openP) : [];
   const openSel = openCode ? selected[openCode] : undefined;
   const reco = openP ? recommendFor(openP) : null;
-  const fab = openP ? fabricFor(openP.line) : undefined;
+  const fab = openP
+    ? openP.division === "Casual"
+      ? casualFabricFor(openP.rawName)
+      : fabricFor(openP.line)
+    : undefined;
 
   return (
     <main className="min-h-screen pb-28 bg-white">
