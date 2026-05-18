@@ -1,11 +1,11 @@
 "use client";
 
-// VISTA PREVIA v3 — catálogo de PRODUCTOS, cada uno con SUS colores
-// (estilo Vuori / página del catálogo). Click en un color del producto
-// cambia el color de esa tarjeta. Datos reales de muestra extraídos del
-// catálogo Mormaii Sports. NO funcional, no toca /s/[token].
+// VISTA PREVIA v4 — catálogo estilo vuoriclothing.com con FOTOS REALES
+// de los productos (mismas del catálogo que ya funciona) + swatches de
+// color por producto. NO funcional, no toca /s/[token].
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { PRODUCTS } from "@/lib/products";
 
 type Color = { code: string; name: string; hex: string };
 
@@ -45,184 +45,218 @@ const PALETTE: Color[] = [
   { code: "00771", name: "Verde Forest", hex: "#34503a" },
   { code: "01421", name: "Verde Mint", hex: "#9fc7b0" },
   { code: "01415", name: "Verde Palmeira", hex: "#2f5d3a" },
-  { code: "00418", name: "Verde Militar", hex: "#5a5f3a" },
-  { code: "00922", name: "Azul", hex: "#2f5e8d" },
-  { code: "01084", name: "Cinza Esverdeado", hex: "#7c8579" },
-  { code: "01339", name: "Vermelho Blood", hex: "#8e2f2f" },
-  { code: "00832", name: "Vinho Syrah", hex: "#5a2233" },
-  { code: "00908", name: "Vinho", hex: "#5a2233" },
   { code: "00150", name: "Amarelo", hex: "#e8c34a" },
+  { code: "00908", name: "Vinho", hex: "#5a2233" },
+  { code: "01339", name: "Vermelho", hex: "#8e2f2f" },
 ];
 const HEX: Record<string, Color> = Object.fromEntries(
   PALETTE.map((c) => [c.code, c]),
 );
 
-type Prod = {
-  code: string;
-  name: string;
-  category: string;
-  gender: "Mujer" | "Hombre";
-  colors: string[]; // códigos de color reales del catálogo
+// Colores reales por producto (muestra extraída del catálogo Sports).
+const COLORS: Record<string, string[]> = {
+  "80578": ["00548", "01237", "00101", "01268", "01263", "01238"],
+  "80582": ["01237", "00548", "01240", "01238", "01263", "01268"],
+  "80580": ["01400", "00548", "00467", "01401", "01402", "00858"],
+  "80608": ["01400", "00548", "00467", "01401", "01402", "00858"],
+  "80586": ["01400", "00548", "00467", "01401", "01402", "00858"],
+  "80574": ["01400", "00548", "00467", "01401", "01402", "00858"],
+  "80584": ["01400", "00548", "00467", "01401", "01402", "00858"],
+  "80576": ["01400", "00548", "00467", "01401", "01402", "00858"],
+  "80587": ["01400", "00548", "00467", "01401", "01402", "00858"],
+  "80579": ["01400", "00548", "00467", "01401", "01402", "00858"],
+  "80599": ["01400", "01401", "01402", "00548"],
+  "80575": ["01400", "01401", "01402", "00548"],
+  "80634": ["01400", "01401", "00858", "00548"],
+  "80646": ["01051", "01393", "01268", "01395", "00771", "01396", "01397", "00548"],
+  "80647": ["01051", "01393", "01268", "01395", "00771", "01396", "01397", "00548"],
+  "80648": ["01051", "01393", "01268", "01395", "00771", "01396", "01397", "00548"],
+  "80650": ["01393", "01398"],
+  "80651": ["01393", "01398"],
+  "80630": ["01190", "00548"],
+  "80628": ["01190", "00548"],
+  "80629": ["01190", "00548"],
+  "80672": ["01421", "01396"],
+  "80673": ["01421", "01396"],
+  "80594": ["00548", "00908"],
+  "80595": ["00548", "00908"],
+  "80602": ["00548", "00908"],
+  "80637": ["01339", "00548", "00550", "01237", "01238", "01413"],
+  "80641": ["01339", "00548", "00550", "01237", "01238", "01413"],
+  "80639": ["00547", "01238"],
+  "80660": ["00547", "01238"],
+  "80661": ["00547", "00582"],
+  "80689": ["00548", "01051"],
+  "80696": ["01420", "00548"],
+  "80697": ["01396", "00548"],
+  "80693": ["00548", "01416"],
+  "80699": ["01416", "00548"],
+  "583211": ["00548", "01247"],
 };
 
-// Muestra real (códigos y colores extraídos del catálogo Mormaii Sports).
-const PRODS: Prod[] = [
-  { code: "80578", name: "Cropped Meia Malha con estampa", category: "Cropped", gender: "Mujer", colors: ["00548", "01237", "00101", "01268", "01263", "01238"] },
-  { code: "80582", name: "Camiseta Alongada Meia Malha", category: "Remeras", gender: "Mujer", colors: ["01237", "00548", "01240", "01238", "01263", "01268"] },
-  { code: "80580", name: "Shorts Básico Mary", category: "Shorts", gender: "Mujer", colors: ["01400", "00548", "00467", "01401", "01402", "00858"] },
-  { code: "80608", name: "Top Nadador Mary", category: "Tops", gender: "Mujer", colors: ["01400", "00548", "00467", "01401", "01402", "00858"] },
-  { code: "80586", name: "Legging Básica Mary c/ bolsos", category: "Calzas / Leggings", gender: "Mujer", colors: ["01400", "00548", "00467", "01401", "01402", "00858"] },
-  { code: "80574", name: "Top Faixa Alça Mary", category: "Tops", gender: "Mujer", colors: ["01400", "00548", "00467", "01401", "01402", "00858"] },
-  { code: "80599", name: "Vestido Curto Mary", category: "Vestidos", gender: "Mujer", colors: ["01400", "01401", "01402", "00548"] },
-  { code: "80646", name: "Legging Power Comfy", category: "Calzas / Leggings", gender: "Mujer", colors: ["01051", "01393", "01268", "01395", "00771", "01396", "01397", "00548"] },
-  { code: "80647", name: "Top Power Comfy", category: "Tops", gender: "Mujer", colors: ["01051", "01393", "01268", "01395", "00771", "01396", "01397", "00548"] },
-  { code: "80650", name: "Legging Power Comfy c/ bolsos", category: "Calzas / Leggings", gender: "Mujer", colors: ["01393", "01398"] },
-  { code: "80630", name: "Top Power Comfy abertura costas", category: "Tops", gender: "Mujer", colors: ["01190", "00548"] },
-  { code: "80672", name: "Saia Dry Fresh Comfy", category: "Polleras", gender: "Mujer", colors: ["01421", "01396"] },
-  { code: "80594", name: "Calça Flare Gloss", category: "Pantalones", gender: "Mujer", colors: ["00548", "00908"] },
-  { code: "80637", name: "Regata Alongada Cotton", category: "Musculosas", gender: "Mujer", colors: ["01339", "00548", "00550", "01237", "01238", "01413"] },
-  { code: "80639", name: "Polo Essence Cropped", category: "Camisas", gender: "Mujer", colors: ["00547", "01238"] },
-  { code: "80660", name: "Camiseta Helanca estampa", category: "Remeras", gender: "Hombre", colors: ["00547", "01238"] },
-  { code: "80661", name: "Camiseta Meia Malha estampa", category: "Remeras", gender: "Hombre", colors: ["00547", "00582"] },
-  { code: "80689", name: "Camiseta Cristal recorte Dry", category: "Remeras", gender: "Hombre", colors: ["00548", "01051"] },
-  { code: "80696", name: "Bermuda Cristal reflectivo", category: "Bermudas", gender: "Hombre", colors: ["01420", "00548"] },
-  { code: "80697", name: "Bermuda Cristal elástico", category: "Bermudas", gender: "Hombre", colors: ["01396", "00548"] },
-  { code: "80693", name: "Camiseta Dry Fresh gola", category: "Remeras", gender: "Hombre", colors: ["00548", "01416"] },
-  { code: "80699", name: "Machão Dry Fresh", category: "Musculosas", gender: "Hombre", colors: ["01416", "00548"] },
-  { code: "583211", name: "Camiseta Malha Modal", category: "Remeras", gender: "Hombre", colors: ["00548", "01247"] },
-  { code: "056056", name: "Bermuda Tactel c/ elastano", category: "Bermudas", gender: "Hombre", colors: ["00165", "00600", "00162", "00548", "00922", "01084"] },
-];
+const USD_PYG = 6500;
+function priceLabel(n: number) {
+  const g = Math.round((n * USD_PYG) / 1000) * 1000;
+  return `US$ ${Math.round(n)} · ₲ ${new Intl.NumberFormat("es-PY").format(g)}`;
+}
+function driveUrl(id: string, w = 700) {
+  return `https://drive.google.com/thumbnail?id=${id}&sz=w${w}`;
+}
 
-export default function PreviewProducts() {
+const SPORTS = PRODUCTS.filter((p) => p.division === "Sports").map((p) => ({
+  code: p.code,
+  imgCode: p.imgCode,
+  name: p.name,
+  category: p.category,
+  gender: p.gender,
+  retail: p.retail,
+}));
+
+function Img({ id, alt }: { id: string; alt: string }) {
+  const [err, setErr] = useState(false);
+  if (err || !id)
+    return (
+      <div className="aspect-[3/4] w-full bg-stone-100 flex items-center justify-center text-stone-300 text-xs">
+        sin foto
+      </div>
+    );
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={driveUrl(id)}
+      alt={alt}
+      loading="lazy"
+      onError={() => setErr(true)}
+      className="aspect-[3/4] w-full object-cover bg-stone-100 group-hover:opacity-90 transition"
+    />
+  );
+}
+
+export default function PreviewCatalog() {
+  const [manifest, setManifest] = useState<Record<string, string[]> | null>(
+    null,
+  );
   const [gender, setGender] = useState<"Mujer" | "Hombre" | "">("");
   const [cat, setCat] = useState("");
-  // color elegido por producto (default = primer color)
-  const [pick, setPick] = useState<Record<string, string>>({});
 
-  const pool = useMemo(
+  useEffect(() => {
+    fetch("/products/manifest.json", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((m) => m && typeof m === "object" && setManifest(m))
+      .catch(() => {});
+  }, []);
+
+  const withPhoto = useMemo(
     () =>
-      PRODS.filter(
-        (p) => (!gender || p.gender === gender) && (!cat || p.category === cat),
-      ),
-    [gender, cat],
+      manifest
+        ? SPORTS.filter((p) => (manifest[p.imgCode] || []).length > 0)
+        : [],
+    [manifest],
   );
 
   const cats = useMemo(() => {
-    const set = new Set<string>();
-    PRODS.forEach((p) => {
-      if (!gender || p.gender === gender) set.add(p.category);
+    const s = new Set<string>();
+    withPhoto.forEach((p) => {
+      if (!gender || p.gender === gender) s.add(p.category);
     });
-    return Array.from(set).sort();
-  }, [gender]);
+    return Array.from(s).sort();
+  }, [withPhoto, gender]);
+
+  const pool = withPhoto.filter(
+    (p) => (!gender || p.gender === gender) && (!cat || p.category === cat),
+  );
 
   return (
     <main className="min-h-screen bg-white text-stone-900">
       <div className="bg-amber-50 border-b border-amber-200 px-5 py-2 text-center text-[12px] text-amber-800">
-        Vista previa v3 · catálogo de productos con sus colores · datos de
-        muestra · para aprobar el concepto antes de migrar la encuesta
+        Vista previa v4 · fotos reales del catálogo + colores por producto ·
+        para aprobar el diseño antes de migrar la encuesta
       </div>
 
-      <header className="px-5 sm:px-8 pt-7 pb-4">
-        <p className="text-[11px] tracking-[0.3em] uppercase text-stone-400">
+      <header className="px-5 sm:px-10 pt-8 pb-4">
+        <p className="text-[11px] tracking-[0.32em] uppercase text-stone-400">
           Mormaii Sports · Verão 27
         </p>
-        <h1 className="mt-1 text-3xl sm:text-4xl font-semibold tracking-tight">
+        <h1 className="mt-1 text-3xl sm:text-5xl font-semibold tracking-tight">
           Catálogo
         </h1>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <div className="flex rounded-full border border-stone-300 overflow-hidden">
-            {(["", "Mujer", "Hombre"] as const).map((g) => (
-              <button
-                key={g || "all"}
-                onClick={() => {
-                  setGender(g);
-                  setCat("");
-                }}
-                className={`px-4 py-2 text-sm ${
-                  gender === g
-                    ? "bg-stone-900 text-white"
-                    : "bg-white text-stone-600"
-                }`}
-              >
-                {g === "" ? "Todos" : g}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-2 overflow-x-auto">
-            <Chip on={!cat} onClick={() => setCat("")}>
-              Todas
-            </Chip>
-            {cats.map((c) => (
-              <Chip key={c} on={cat === c} onClick={() => setCat(c)}>
-                {c}
-              </Chip>
-            ))}
-          </div>
-        </div>
       </header>
 
-      <section className="px-5 sm:px-8 pb-20">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10">
-          {pool.map((p) => {
-            const sel = pick[p.code] || p.colors[0];
-            const c = HEX[sel] || { name: sel, hex: "#ccc" };
-            return (
-              <div key={p.code} className="flex flex-col">
-                {/* "foto" del producto en el color elegido (placeholder
-                    tintado — la foto real va en la implementación) */}
-                <div
-                  className="aspect-[3/4] w-full rounded-lg border border-stone-100 flex items-end justify-center transition-colors"
-                  style={{
-                    background: `linear-gradient(165deg, ${c.hex} 0%, #ffffff 140%)`,
-                  }}
-                >
-                  <span className="mb-3 text-[10px] uppercase tracking-wide text-stone-600 bg-white/85 px-2 py-0.5 rounded-full">
-                    {p.name.split(" ")[0]} · {c.name}
-                  </span>
-                </div>
-
-                <p className="text-[10px] uppercase tracking-wide text-stone-400 mt-3">
-                  {p.gender} · {p.category}
-                </p>
-                <p className="text-sm mt-1 leading-snug min-h-[2.4rem]">
-                  {p.name}
-                </p>
-                <p className="text-[11px] text-stone-400">#{p.code}</p>
-
-                {/* swatches de color DEL PRODUCTO */}
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  {p.colors.map((cc) => {
-                    const on = cc === sel;
-                    return (
-                      <button
-                        key={cc}
-                        title={HEX[cc]?.name || cc}
-                        onClick={() =>
-                          setPick((prev) => ({ ...prev, [p.code]: cc }))
-                        }
-                        className={`h-6 w-6 rounded-full border-2 transition ${
-                          on
-                            ? "border-stone-900 scale-110"
-                            : "border-stone-200 hover:border-stone-400"
-                        }`}
-                        style={{ backgroundColor: HEX[cc]?.hex || "#ccc" }}
-                      />
-                    );
-                  })}
-                  <span className="text-[11px] text-stone-500 ml-1">
-                    {p.colors.length}{" "}
-                    {p.colors.length === 1 ? "color" : "colores"}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-y border-stone-200 px-5 sm:px-10 py-3 flex flex-wrap items-center gap-3">
+        <div className="flex rounded-full border border-stone-300 overflow-hidden">
+          {(["", "Mujer", "Hombre"] as const).map((g) => (
+            <button
+              key={g || "all"}
+              onClick={() => {
+                setGender(g);
+                setCat("");
+              }}
+              className={`px-5 py-2 text-sm ${
+                gender === g
+                  ? "bg-stone-900 text-white"
+                  : "bg-white text-stone-600"
+              }`}
+            >
+              {g === "" ? "Todos" : g}
+            </button>
+          ))}
         </div>
+        <div className="flex gap-2 overflow-x-auto -mx-1 px-1">
+          <Chip on={!cat} onClick={() => setCat("")}>
+            Todas
+          </Chip>
+          {cats.map((c) => (
+            <Chip key={c} on={cat === c} onClick={() => setCat(c)}>
+              {c}
+            </Chip>
+          ))}
+        </div>
+        <span className="ml-auto text-xs text-stone-400">
+          {manifest === null ? "Cargando…" : `${pool.length} productos`}
+        </span>
+      </div>
 
-        {pool.length === 0 && (
-          <p className="text-center text-stone-400 py-16">
-            No hay productos con ese filtro.
+      <section className="px-5 sm:px-10 py-8">
+        {manifest === null ? (
+          <p className="text-center text-stone-400 py-24">
+            Cargando catálogo…
           </p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12">
+            {pool.map((p) => {
+              const imgs = manifest[p.imgCode] || [];
+              const cols = COLORS[p.code] || [];
+              return (
+                <div key={p.code} className="group flex flex-col">
+                  <div className="overflow-hidden rounded-lg">
+                    <Img id={imgs[0] || ""} alt={p.name} />
+                  </div>
+                  <p className="text-[10px] uppercase tracking-[0.15em] text-stone-400 mt-3">
+                    {p.gender} · {p.category}
+                  </p>
+                  <p className="text-[15px] mt-1 leading-snug">{p.name}</p>
+                  <p className="text-sm text-stone-500 mt-0.5">
+                    {priceLabel(p.retail)}
+                  </p>
+                  {cols.length > 0 && (
+                    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                      {cols.map((cc) => (
+                        <span
+                          key={cc}
+                          title={HEX[cc]?.name || cc}
+                          className="h-5 w-5 rounded-full border border-stone-300"
+                          style={{ backgroundColor: HEX[cc]?.hex || "#ccc" }}
+                        />
+                      ))}
+                      <span className="text-[11px] text-stone-500 ml-1">
+                        {cols.length} colores
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
       </section>
     </main>
