@@ -68,6 +68,10 @@ export default function AdminPedidos() {
         <div className="flex gap-2">
           <a href="/admin" className="text-sm bg-stone-200 text-stone-700 rounded-lg px-4 py-2">← Encuesta</a>
           <button onClick={load} className="text-sm bg-stone-200 text-stone-700 rounded-lg px-4 py-2">Actualizar</button>
+          <a href="/api/admin/export-pedidos"
+            className="text-sm bg-brand-accent text-white rounded-lg px-4 py-2 font-medium">
+            Descargar CSV
+          </a>
         </div>
       </div>
 
