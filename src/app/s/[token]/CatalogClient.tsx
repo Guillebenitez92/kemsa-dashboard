@@ -9,9 +9,11 @@
 import { useEffect, useMemo, useState } from "react";
 
 type Variant = { colorCode: string; colorName: string; hex: string; photos: string[] };
+type Fabric = { name: string; tagline: string; features: string[]; desc: string };
 type Product = {
   code: string; name: string; section: string; category: string;
-  collection: string; page: string; mayorista: number; variants: Variant[];
+  collection: string; page: string; mayorista: number;
+  commercialDesc?: string; fabric?: Fabric | null; variants: Variant[];
 };
 type Tile = { p: Product; v: Variant; key: string };
 type CartLine = { key: string; p: Product; v: Variant; qty: number };
@@ -133,7 +135,12 @@ export default function CatalogClient({ token }: { token?: string }) {
       (m.get(k) || m.set(k, []).get(k)!).push(t);
     }
     return Array.from(m.entries())
-      .sort((a, b) => a[0].localeCompare(b[0], "es"))
+      .sort((a, b) => {
+        // Gorras ("Cap") siempre al final → en Hombre, la ropa aparece primero.
+        const ca = a[0] === "Cap" ? 1 : 0;
+        const cb = b[0] === "Cap" ? 1 : 0;
+        return ca - cb || a[0].localeCompare(b[0], "es");
+      })
       .map(([name, items]) => ({ name, items }));
   }, [filtered]);
 
@@ -377,6 +384,10 @@ function Modal({ tile, cart, setQty, onClose, onPickVariant }: {
               Curva (8u) · {usd(p.mayorista * CURVA_UNITS)}
             </div>
           </div>
+
+          {p.commercialDesc && (
+            <p className="mt-3 text-sm text-stone-600 leading-relaxed">{p.commercialDesc}</p>
+          )}
           {p.variants.length > 1 && (
             <div className="mt-4">
               <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">
@@ -398,7 +409,25 @@ function Modal({ tile, cart, setQty, onClose, onPickVariant }: {
               <CurvaTags />
             </div>
           )}
-          <div className="mt-2"><Stepper qty={qty} onChange={(qn) => setQty(key, qn)} /></div>
+
+          {p.fabric && (
+            <div className="mt-5 border-t border-stone-100 pt-4">
+              <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">
+                La tela · {p.fabric.name}
+              </p>
+              <p className="text-sm font-medium mt-1">{p.fabric.tagline}</p>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {p.fabric.features.map((f) => (
+                  <span key={f} className="text-[11px] px-2 py-1 border border-stone-300 text-stone-600 rounded-full">
+                    {f}
+                  </span>
+                ))}
+              </div>
+              <p className="text-xs text-stone-500 leading-relaxed mt-2">{p.fabric.desc}</p>
+            </div>
+          )}
+
+          <div className="mt-4"><Stepper qty={qty} onChange={(qn) => setQty(key, qn)} /></div>
           <button onClick={onClose} className="mt-6 w-full rounded-full py-3 text-sm bg-black text-white font-medium">Listo</button>
         </div>
       </div>
