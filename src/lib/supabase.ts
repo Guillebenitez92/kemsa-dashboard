@@ -53,6 +53,58 @@ export async function insertResponse(payload: {
   }
 }
 
+export type PedidoItem = {
+  code: string;
+  name: string;
+  color: string;
+  colorCode: string;
+  curvas: number;
+  unidades: number;
+  mayoristaUnit: number;
+};
+export type Pedido = {
+  empresa: string;
+  contacto: string;
+  phone: string | null;
+  comment: string | null;
+  total_curvas: number;
+  total_unidades: number;
+  total_usd: number;
+  items: PedidoItem[];
+};
+export type StoredPedido = Pedido & { id: string; created_at: string };
+
+export async function insertPedido(payload: Pedido): Promise<void> {
+  if (!supabaseConfigured()) {
+    throw new Error("Supabase no está configurado (faltan variables de entorno).");
+  }
+  const res = await fetch(`${URL}/rest/v1/pedidos`, {
+    method: "POST",
+    headers: { ...headers(), Prefer: "return=minimal" },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Error al guardar el pedido (${res.status}): ${text}`);
+  }
+}
+
+export async function fetchPedidos(): Promise<StoredPedido[]> {
+  if (!supabaseConfigured()) {
+    throw new Error("Supabase no está configurado (faltan variables de entorno).");
+  }
+  const res = await fetch(
+    `${URL}/rest/v1/pedidos?select=*&order=created_at.desc`,
+    { headers: headers(), cache: "no-store" },
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Error al leer pedidos (${res.status}): ${text}`);
+  }
+  return (await res.json()) as StoredPedido[];
+}
+
 export async function fetchResponses(): Promise<StoredResponse[]> {
   if (!supabaseConfigured()) {
     throw new Error("Supabase no está configurado (faltan variables de entorno).");

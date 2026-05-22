@@ -163,6 +163,12 @@ export default function AdminPage() {
         </div>
         <div className="flex gap-2">
           <a
+            href="/admin/pedidos"
+            className="text-sm bg-brand text-white rounded-lg px-4 py-2 font-medium"
+          >
+            Pedidos mayoristas →
+          </a>
+          <a
             href="/api/admin/export"
             className="text-sm bg-brand-accent text-white rounded-lg px-4 py-2 font-medium"
           >
