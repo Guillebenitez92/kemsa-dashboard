@@ -33,12 +33,9 @@ const CURVA = [
   { size: "GG", units: 2 },
 ];
 const CURVA_UNITS = 8;
-const USD_PYG = 7300;
 
 const usd = (n: number) =>
   "US$ " + n.toLocaleString("es-PY", { maximumFractionDigits: 2 });
-const pyg = (n: number) =>
-  "₲ " + new Intl.NumberFormat("es-PY").format(Math.round((n * USD_PYG) / 1000) * 1000);
 
 function Photo({ src, alt, className }: { src?: string; alt: string; className: string }) {
   const [err, setErr] = useState(false);
@@ -396,7 +393,7 @@ function Modal({ tile, cart, setQty, onClose, onPickVariant }: {
             <span className="text-lg font-semibold">{usd(p.mayorista)}</span>
             <span className="text-[11px] uppercase tracking-wide text-stone-400 ml-2">/ unidad mayorista</span>
             <div className="text-[12px] text-stone-500 mt-0.5">
-              Curva (8u) · {usd(p.mayorista * CURVA_UNITS)} · {pyg(p.mayorista * CURVA_UNITS)}
+              Curva (8u) · {usd(p.mayorista * CURVA_UNITS)}
             </div>
           </div>
           {p.variants.length > 1 && (
