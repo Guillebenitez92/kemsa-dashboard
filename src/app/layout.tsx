@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Encuesta de Catálogo — Mormaii Sports",
-  description: "Encuesta privada de preferencia de productos.",
+  title: "Catálogo Mormaii — Mayorista",
+  description: "Catálogo mayorista Mormaii (Sports · Casual · Jiu-Jitsu).",
   robots: { index: false, follow: false },
 };
 

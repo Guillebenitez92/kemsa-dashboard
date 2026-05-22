@@ -67,7 +67,7 @@ export default function AdminPedidos() {
           <p className="text-sm text-stone-500">Pedidos de locales/tiendas desde el catálogo.</p>
         </div>
         <div className="flex gap-2">
-          <a href="/admin" className="text-sm bg-stone-200 text-stone-700 rounded-lg px-4 py-2">← Encuesta</a>
+          <a href="/admin" className="text-sm bg-stone-200 text-stone-700 rounded-lg px-4 py-2">← Admin</a>
           <button onClick={load} className="text-sm bg-stone-200 text-stone-700 rounded-lg px-4 py-2">Actualizar</button>
           <a href="/api/admin/export-pedidos"
             className="text-sm bg-brand-accent text-white rounded-lg px-4 py-2 font-medium">
