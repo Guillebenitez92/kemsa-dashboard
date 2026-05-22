@@ -262,10 +262,14 @@ export default function CatalogoMayorista() {
                         className="aspect-[3/4] w-full object-cover bg-stone-100 group-hover:opacity-90 transition" />
                     </div>
                     <p className="text-[10px] uppercase tracking-[0.13em] text-stone-400 mt-2.5">
-                      {t.p.category} · {t.v.colorName}
+                      {t.p.category}{t.v.colorCode !== "-" ? ` · ${t.v.colorName}` : ""}
                     </p>
-                    <p className="text-[13px] leading-snug mt-1 line-clamp-2 min-h-[2.4rem] text-stone-800">{t.p.name}</p>
-                    <p className="text-sm font-semibold mt-0.5">{usd(t.p.mayorista)}
+                    <p className="text-[13px] leading-snug mt-1 line-clamp-2 min-h-[2.2rem] text-stone-800">{t.p.name}</p>
+                    <p className="text-[11px] text-stone-400 font-mono">
+                      #{t.p.code}
+                      {t.v.colorCode !== "-" ? `  ·  color ${t.v.colorCode}` : ""}
+                    </p>
+                    <p className="text-sm font-semibold mt-1">{usd(t.p.mayorista)}
                       <span className="text-[11px] font-normal text-stone-400 ml-1.5">/ unid. mayorista</span>
                     </p>
                     <p className="text-[11px] text-stone-500">Curva (8u) · {usd(t.p.mayorista * CURVA_UNITS)}</p>
@@ -354,7 +358,11 @@ function Modal({ tile, cart, setQty, onClose, onPickVariant }: {
         <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100 sticky top-0 bg-white z-10">
           <div className="min-w-0 pr-3">
             <p className="font-medium text-sm truncate">{p.name}</p>
-            <p className="text-[11px] text-stone-400 mt-0.5">#{p.code} · {v.colorName} · {p.collection}</p>
+            <p className="text-[11px] text-stone-400 mt-0.5 font-mono">
+              #{p.code}
+              {v.colorCode !== "-" ? ` · ${v.colorName} (${v.colorCode})` : ""}
+              {p.collection ? ` · ${p.collection}` : ""}
+            </p>
           </div>
           <button onClick={onClose} className="text-stone-400 text-xl px-1">✕</button>
         </div>
