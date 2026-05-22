@@ -282,7 +282,7 @@ export default function CatalogoMayorista() {
                       ))}
                     </div>
                   )}
-                  <CurvaTags />
+                  {t.p.category !== "Boné" && <CurvaTags />}
                   <Stepper qty={qty} onChange={(qn) => setQty(t.key, qn)} />
                 </div>
               );
@@ -411,10 +411,12 @@ function Modal({ tile, cart, setQty, onClose, onPickVariant }: {
               </div>
             </div>
           )}
-          <div className="mt-4">
-            <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">Curva pre-pack</p>
-            <CurvaTags />
-          </div>
+          {p.category !== "Boné" && (
+            <div className="mt-4">
+              <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">Curva pre-pack</p>
+              <CurvaTags />
+            </div>
+          )}
           <div className="mt-2"><Stepper qty={qty} onChange={(qn) => setQty(key, qn)} /></div>
           <button onClick={onClose} className="mt-6 w-full rounded-full py-3 text-sm bg-black text-white font-medium">Listo</button>
         </div>
