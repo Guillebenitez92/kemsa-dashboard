@@ -116,9 +116,11 @@ export default function SurveyClient({
   products: P[];
   multiplier: number;
 }) {
+  // Handoff "sports only": la app arranca directo en el home de Sports.
+  // Para reactivar Casual: volver el step inicial a "divisions".
   const [step, setStep] = useState<
     "divisions" | "home" | "catalog" | "form" | "done"
-  >("divisions");
+  >("home");
   const [division, setDivision] = useState<Division>("Sports");
   const [selected, setSelected] = useState<Record<string, Sel>>({});
   const [q, setQ] = useState("");
@@ -356,6 +358,9 @@ export default function SurveyClient({
     );
   }
 
+  // Pantalla de elección Casual/Deportivo — DESHABILITADA (handoff "sports
+  // only"). Queda en el código para reactivar Casual en el futuro: poner el
+  // step inicial en "divisions" y restaurar el botón "← Línea" del home.
   if (step === "divisions") {
     const pick = (d: Division) => {
       setDivision(d);
@@ -486,12 +491,6 @@ export default function SurveyClient({
           <Cover g="Mujer" label="MUJER" src={vMujer} />
           <Cover g="Hombre" label="HOMBRE" src={vHombre} />
         </div>
-        <button
-          onClick={() => setStep("divisions")}
-          className="absolute top-5 left-5 z-10 text-[11px] uppercase tracking-[0.2em] text-white/90 hover:text-white"
-        >
-          ← Línea
-        </button>
         <div className="absolute top-0 inset-x-0 pt-6 text-center pointer-events-none">
           <p className="text-[11px] tracking-[0.3em] text-white/80 uppercase">
             Encuesta de catálogo
