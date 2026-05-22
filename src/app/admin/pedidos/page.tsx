@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 
 type Item = {
   code: string; name: string; color: string; colorCode: string;
+  size?: string | null;
   curvas: number; unidades: number; mayoristaUnit: number;
 };
 type Pedido = {
@@ -126,7 +127,7 @@ export default function AdminPedidos() {
                       )}
                       <table className="w-full text-xs">
                         <thead className="text-stone-400 text-left">
-                          <tr><th className="py-1">Código</th><th>Producto</th><th>Color</th>
+                          <tr><th className="py-1">Código</th><th>Producto</th><th>Color / Talle</th>
                             <th className="text-right">Curvas</th><th className="text-right">Unid.</th>
                             <th className="text-right">Mayorista u.</th><th className="text-right">FOB u.</th></tr>
                         </thead>
@@ -135,8 +136,11 @@ export default function AdminPedidos() {
                             <tr key={i} className="border-t border-stone-200">
                               <td className="py-1 font-mono">{it.code}</td>
                               <td>{it.name}</td>
-                              <td>{it.color}{it.colorCode && it.colorCode !== "-" ? ` (${it.colorCode})` : ""}</td>
-                              <td className="text-right">{it.curvas}</td>
+                              <td>
+                                {it.color}{it.colorCode && it.colorCode !== "-" ? ` (${it.colorCode})` : ""}
+                                {it.size ? ` · talle ${it.size}` : ""}
+                              </td>
+                              <td className="text-right">{it.curvas || "—"}</td>
                               <td className="text-right">{it.unidades}</td>
                               <td className="text-right">{usd(it.mayoristaUnit)}</td>
                               <td className="text-right text-stone-500">{usd(it.mayoristaUnit / 2.3)}</td>

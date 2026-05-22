@@ -31,28 +31,33 @@ export async function POST(req: NextRequest) {
   const items: PedidoItem[] = rawItems
     .map((it: any) => {
       const curvas = Math.max(0, Math.round(Number(it?.curvas) || 0));
+      const sentUnits = Math.max(0, Math.round(Number(it?.unidades) || 0));
+      // Curva → 8u por curva; talle (Jiu-Jitsu) → unidades enviadas directo.
+      const unidades = curvas > 0 ? curvas * CURVA_UNITS : sentUnits;
+      const size = it?.size ? String(it.size).slice(0, 24) : null;
       return {
-        code: String(it?.code || "").slice(0, 20),
+        code: String(it?.code || "").slice(0, 24),
         name: String(it?.name || "").slice(0, 200),
         color: String(it?.color || "").slice(0, 80),
         colorCode: String(it?.colorCode || "").slice(0, 20),
+        size,
         curvas,
-        unidades: curvas * CURVA_UNITS,
+        unidades,
         mayoristaUnit: Math.round((Number(it?.mayoristaUnit) || 0) * 100) / 100,
       };
     })
-    .filter((it: PedidoItem) => it.code && it.curvas > 0)
+    .filter((it: PedidoItem) => it.code && it.unidades > 0)
     .slice(0, 400);
 
   if (items.length === 0) {
     return NextResponse.json(
-      { error: "El pedido no tiene curvas." },
+      { error: "El pedido no tiene productos." },
       { status: 400 },
     );
   }
 
   const total_curvas = items.reduce((s, it) => s + it.curvas, 0);
-  const total_unidades = total_curvas * CURVA_UNITS;
+  const total_unidades = items.reduce((s, it) => s + it.unidades, 0);
   const total_usd =
     Math.round(
       items.reduce((s, it) => s + it.mayoristaUnit * it.unidades, 0) * 100,

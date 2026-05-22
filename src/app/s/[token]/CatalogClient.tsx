@@ -8,16 +8,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-type Variant = { colorCode: string; colorName: string; hex: string; photos: string[] };
+type Variant = {
+  colorCode: string; colorName: string; hex: string;
+  photos: string[]; mayorista?: number;
+};
 type Fabric = { name: string; tagline: string; features: string[]; desc: string };
 type Product = {
   code: string; name: string; section: string; category: string;
   collection: string; page: string; mayorista: number;
+  kind?: "curva" | "sized"; sizes?: string[];
   commercialDesc?: string; composition?: string | null;
   fabric?: Fabric | null; variants: Variant[];
 };
 type Tile = { p: Product; v: Variant; key: string };
-type CartLine = { key: string; p: Product; v: Variant; qty: number };
+type CartLine = { key: string; p: Product; v: Variant; size?: string; qty: number };
 
 const CURVA = [
   { size: "P", units: 1 }, { size: "M", units: 2 },
@@ -26,6 +30,11 @@ const CURVA = [
 const CURVA_UNITS = 8;
 const usd = (n: number) =>
   "US$ " + n.toLocaleString("es-PY", { maximumFractionDigits: 2 });
+
+// Jiu-Jitsu se pide por talle; sportswear por curva pre-pack de 8u.
+const isSized = (p: Product) => p.kind === "sized";
+// Precio mayorista por unidad — el color puede tener su propio precio (kimonos).
+const unitPrice = (p: Product, v: Variant) => v.mayorista ?? p.mayorista;
 
 function Photo({ src, alt, className }: { src?: string; alt: string; className: string }) {
   const [err, setErr] = useState(false);
@@ -135,13 +144,15 @@ export default function CatalogClient({ token }: { token?: string }) {
       const k = t.p.collection || "Otros";
       (m.get(k) || m.set(k, []).get(k)!).push(t);
     }
+    // Orden de colecciones: Jiu-Jitsu primero kimonos; gorras siempre al final.
+    const rank = (name: string) => {
+      const jj = ["Kimonos", "Faixas", "No-Gi"].indexOf(name);
+      if (jj >= 0) return jj;
+      if (name === "Cap") return 99;
+      return 50;
+    };
     return Array.from(m.entries())
-      .sort((a, b) => {
-        // Gorras ("Cap") siempre al final → en Hombre, la ropa aparece primero.
-        const ca = a[0] === "Cap" ? 1 : 0;
-        const cb = b[0] === "Cap" ? 1 : 0;
-        return ca - cb || a[0].localeCompare(b[0], "es");
-      })
+      .sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0], "es"))
       .map(([name, items]) => ({ name, items }));
   }, [filtered]);
 
@@ -157,16 +168,18 @@ export default function CatalogClient({ token }: { token?: string }) {
     if (!products) return [];
     const out: CartLine[] = [];
     for (const key of Object.keys(cart)) {
-      const [pcode, ccode] = key.split("/");
+      const [pcode, ccode, size] = key.split("/");
       const p = products.find((x) => x.code === pcode);
       const v = p?.variants.find((x) => x.colorCode === ccode);
-      if (p && v) out.push({ key, p, v, qty: cart[key] });
+      if (p && v) out.push({ key, p, v, size, qty: cart[key] });
     }
     return out;
   }, [cart, products]);
 
-  const totalCurvas = cartLines.reduce((s, l) => s + l.qty, 0);
-  const totalUsd = cartLines.reduce((s, l) => s + l.p.mayorista * CURVA_UNITS * l.qty, 0);
+  // Unidades de una línea: curva = qty×8; talle = qty directo.
+  const lineUnits = (l: CartLine) => (isSized(l.p) ? l.qty : l.qty * CURVA_UNITS);
+  const totalUnits = cartLines.reduce((s, l) => s + lineUnits(l), 0);
+  const totalUsd = cartLines.reduce((s, l) => s + unitPrice(l.p, l.v) * lineUnits(l), 0);
 
   if (step === "done")
     return (
@@ -187,7 +200,7 @@ export default function CatalogClient({ token }: { token?: string }) {
     );
 
   if (step === "checkout")
-    return <Checkout token={token} lines={cartLines} totalCurvas={totalCurvas} totalUsd={totalUsd}
+    return <Checkout token={token} lines={cartLines} totalUnits={totalUnits} totalUsd={totalUsd}
       onBack={() => setStep("catalog")} onDone={() => setStep("done")} />;
 
   return (
@@ -202,15 +215,15 @@ export default function CatalogClient({ token }: { token?: string }) {
         <div>
           <p className="text-[11px] tracking-[0.3em] uppercase text-stone-400">Catálogo mayorista</p>
           <h1 className="mt-1 text-3xl sm:text-4xl font-semibold tracking-tight">
-            Mormaii Sports · Verão 27
+            Mormaii · Verão 27
           </h1>
           <p className="text-sm text-stone-500 mt-1.5">
-            Pre-pack <span className="font-medium text-stone-700">P×1 · M×2 · G×3 · GG×2</span> · precio mayorista por unidad.
+            Sportswear y Casual por <span className="font-medium text-stone-700">curva pre-pack (8u)</span> · Jiu-Jitsu por talle · precio mayorista por unidad.
           </p>
         </div>
         <button onClick={() => setCartOpen(true)}
           className="shrink-0 inline-flex items-center gap-2 border border-stone-300 rounded-full px-4 py-2 text-sm hover:border-stone-900 transition">
-          🛒 <span className="font-medium">{totalCurvas}</span>
+          🛒 <span className="font-medium">{totalUnits}</span>
         </button>
       </header>
 
@@ -240,7 +253,13 @@ export default function CatalogClient({ token }: { token?: string }) {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-9 px-5 sm:px-10 py-4">
             {g.items.map((t) => {
-              const qty = cart[t.key] || 0;
+              const szd = isSized(t.p);
+              const price = unitPrice(t.p, t.v);
+              const qty = szd
+                ? Object.keys(cart)
+                    .filter((k) => k.startsWith(`${t.p.code}/${t.v.colorCode}/`))
+                    .reduce((s, k) => s + cart[k], 0)
+                : cart[t.key] || 0;
               return (
                 <div key={t.key} className="flex flex-col">
                   <button onClick={() => setOpen(t)} className="block text-left group">
@@ -255,10 +274,14 @@ export default function CatalogClient({ token }: { token?: string }) {
                     <p className="text-[11px] text-stone-400 font-mono">
                       #{t.p.code}{t.v.colorCode !== "-" ? `  ·  color ${t.v.colorCode}` : ""}
                     </p>
-                    <p className="text-sm font-semibold mt-1">{usd(t.p.mayorista)}
+                    <p className="text-sm font-semibold mt-1">{usd(price)}
                       <span className="text-[11px] font-normal text-stone-400 ml-1.5">/ unid. mayorista</span>
                     </p>
-                    <p className="text-[11px] text-stone-500">Curva (8u) · {usd(t.p.mayorista * CURVA_UNITS)}</p>
+                    {szd ? (
+                      <p className="text-[11px] text-stone-500">Talles {t.p.sizes?.join(" · ")}</p>
+                    ) : (
+                      <p className="text-[11px] text-stone-500">Curva (8u) · {usd(price * CURVA_UNITS)}</p>
+                    )}
                   </button>
                   {t.p.variants.length > 1 && (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -271,8 +294,17 @@ export default function CatalogClient({ token }: { token?: string }) {
                       ))}
                     </div>
                   )}
-                  {t.p.category !== "Boné" && <CurvaTags />}
-                  <Stepper qty={qty} onChange={(qn) => setQty(t.key, qn)} />
+                  {szd ? (
+                    <button onClick={() => setOpen(t)}
+                      className="mt-2 w-full rounded-full border border-black font-medium py-2 text-xs hover:bg-stone-100 transition">
+                      {qty > 0 ? `${qty} u. · editar talles` : "Elegir talles"}
+                    </button>
+                  ) : (
+                    <>
+                      {t.p.category !== "Boné" && <CurvaTags />}
+                      <Stepper qty={qty} onChange={(qn) => setQty(t.key, qn)} />
+                    </>
+                  )}
                 </div>
               );
             })}
@@ -286,16 +318,16 @@ export default function CatalogClient({ token }: { token?: string }) {
       )}
 
       {cartOpen && (
-        <CartDrawer lines={cartLines} totalCurvas={totalCurvas} totalUsd={totalUsd}
+        <CartDrawer lines={cartLines} totalUnits={totalUnits} totalUsd={totalUsd}
           setQty={setQty} onClose={() => setCartOpen(false)}
           onCheckout={() => { setCartOpen(false); setStep("checkout"); }} />
       )}
 
-      {totalCurvas > 0 && (
+      {totalUnits > 0 && (
         <div className="fixed bottom-0 inset-x-0 bg-white border-t border-stone-200 px-5 py-4 z-30">
           <div className="max-w-lg mx-auto flex items-center gap-3">
             <span className="text-sm text-stone-600">
-              🛒 <span className="font-semibold text-stone-900">{totalCurvas}</span> curvas · {usd(totalUsd)}
+              🛒 <span className="font-semibold text-stone-900">{totalUnits}</span> unidades · {usd(totalUsd)}
             </span>
             <button onClick={() => setCartOpen(true)}
               className="ml-auto bg-black text-white font-medium rounded-full px-7 py-3">Ver carrito →</button>
@@ -379,10 +411,12 @@ function Modal({ tile, cart, setQty, onClose, onPickVariant }: {
             </div>
           )}
           <div className="mt-4">
-            <span className="text-lg font-semibold">{usd(p.mayorista)}</span>
+            <span className="text-lg font-semibold">{usd(unitPrice(p, v))}</span>
             <span className="text-[11px] uppercase tracking-wide text-stone-400 ml-2">/ unidad mayorista</span>
             <div className="text-[12px] text-stone-500 mt-0.5">
-              Curva (8u) · {usd(p.mayorista * CURVA_UNITS)}
+              {isSized(p)
+                ? "Pedido por talle y cantidad"
+                : `Curva (8u) · ${usd(unitPrice(p, v) * CURVA_UNITS)}`}
             </div>
           </div>
 
@@ -410,7 +444,7 @@ function Modal({ tile, cart, setQty, onClose, onPickVariant }: {
               </div>
             </div>
           )}
-          {p.category !== "Boné" && (
+          {!isSized(p) && p.category !== "Boné" && (
             <div className="mt-4">
               <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">Curva pre-pack</p>
               <CurvaTags />
@@ -434,7 +468,9 @@ function Modal({ tile, cart, setQty, onClose, onPickVariant }: {
             </div>
           )}
 
-          <div className="mt-4"><Stepper qty={qty} onChange={(qn) => setQty(key, qn)} /></div>
+          {isSized(p)
+            ? <SizeGrid p={p} v={v} cart={cart} setQty={setQty} />
+            : <div className="mt-4"><Stepper qty={qty} onChange={(qn) => setQty(key, qn)} /></div>}
           <button onClick={onClose} className="mt-6 w-full rounded-full py-3 text-sm bg-black text-white font-medium">Listo</button>
         </div>
       </div>
@@ -442,8 +478,46 @@ function Modal({ tile, cart, setQty, onClose, onPickVariant }: {
   );
 }
 
-function CartDrawer({ lines, totalCurvas, totalUsd, setQty, onClose, onCheckout }: {
-  lines: CartLine[]; totalCurvas: number; totalUsd: number;
+function SizeGrid({ p, v, cart, setQty }: {
+  p: Product; v: Variant; cart: Record<string, number>;
+  setQty: (k: string, q: number) => void;
+}) {
+  const total = (p.sizes || []).reduce(
+    (s, sz) => s + (cart[`${p.code}/${v.colorCode}/${sz}`] || 0), 0);
+  return (
+    <div className="mt-4">
+      <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">
+        Talle y cantidad
+        {total > 0 && (
+          <span className="ml-2 text-stone-900 normal-case tracking-normal">· {total} u.</span>
+        )}
+      </p>
+      <div className="mt-2 space-y-1.5">
+        {(p.sizes || []).map((sz) => {
+          const k = `${p.code}/${v.colorCode}/${sz}`;
+          const q = cart[k] || 0;
+          return (
+            <div key={sz}
+              className={"flex items-center justify-between rounded-xl border px-3 py-1.5 " +
+                (q > 0 ? "border-black bg-stone-50" : "border-stone-200")}>
+              <span className="text-sm font-medium">{sz}</span>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setQty(k, Math.max(0, q - 1))}
+                  className="w-8 h-8 rounded-full border border-stone-300 text-lg leading-none hover:bg-stone-100">−</button>
+                <span className="w-9 text-center text-sm font-semibold tabular-nums">{q}</span>
+                <button onClick={() => setQty(k, q + 1)}
+                  className="w-8 h-8 rounded-full border border-stone-300 text-lg leading-none hover:bg-stone-100">+</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CartDrawer({ lines, totalUnits, totalUsd, setQty, onClose, onCheckout }: {
+  lines: CartLine[]; totalUnits: number; totalUsd: number;
   setQty: (k: string, q: number) => void; onClose: () => void; onCheckout: () => void;
 }) {
   return (
@@ -454,24 +528,44 @@ function CartDrawer({ lines, totalCurvas, totalUsd, setQty, onClose, onCheckout 
           <button onClick={onClose} className="text-stone-400 text-xl px-1">✕</button>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-          {lines.length === 0 && <p className="text-sm text-stone-400 text-center py-12">Todavía no agregaste curvas.</p>}
-          {lines.map((l) => (
-            <div key={l.key} className="flex gap-3 pb-4 border-b border-stone-100">
-              <Photo src={l.v.photos[0]} alt={l.p.name} className="w-16 h-20 object-cover rounded bg-stone-100 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] leading-snug line-clamp-2">{l.p.name}</p>
-                <p className="text-[11px] text-stone-500 mt-0.5">#{l.p.code} · {l.v.colorName}</p>
-                <p className="text-[11px] font-semibold mt-1">{usd(l.p.mayorista * CURVA_UNITS)} / curva</p>
-                <Stepper qty={l.qty} onChange={(qn) => setQty(l.key, qn)} />
+          {lines.length === 0 && <p className="text-sm text-stone-400 text-center py-12">Todavía no agregaste productos.</p>}
+          {lines.map((l) => {
+            const szd = isSized(l.p);
+            const price = unitPrice(l.p, l.v);
+            return (
+              <div key={l.key} className="flex gap-3 pb-4 border-b border-stone-100">
+                <Photo src={l.v.photos[0]} alt={l.p.name} className="w-16 h-20 object-cover rounded bg-stone-100 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] leading-snug line-clamp-2">{l.p.name}</p>
+                  <p className="text-[11px] text-stone-500 mt-0.5">
+                    #{l.p.code}
+                    {l.v.colorCode !== "-" ? ` · ${l.v.colorName}` : ""}
+                    {l.size ? ` · talle ${l.size}` : ""}
+                  </p>
+                  <p className="text-[11px] font-semibold mt-1">
+                    {szd ? `${usd(price)} / unidad` : `${usd(price * CURVA_UNITS)} / curva`}
+                  </p>
+                  {szd ? (
+                    <div className="mt-2 flex items-center gap-1">
+                      <button onClick={() => setQty(l.key, Math.max(0, l.qty - 1))}
+                        className="w-8 h-8 rounded-full border border-stone-300 text-lg leading-none hover:bg-stone-100">−</button>
+                      <span className="w-12 text-center text-xs font-semibold">{l.qty} u.</span>
+                      <button onClick={() => setQty(l.key, l.qty + 1)}
+                        className="w-8 h-8 rounded-full border border-stone-300 text-lg leading-none hover:bg-stone-100">+</button>
+                    </div>
+                  ) : (
+                    <Stepper qty={l.qty} onChange={(qn) => setQty(l.key, qn)} />
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         {lines.length > 0 && (
           <div className="border-t border-stone-200 px-5 py-4">
             <div className="flex justify-between text-sm mb-1">
-              <span className="text-stone-500">Curvas</span>
-              <span className="font-medium">{totalCurvas} · {totalCurvas * CURVA_UNITS} unidades</span>
+              <span className="text-stone-500">Unidades</span>
+              <span className="font-medium">{totalUnits}</span>
             </div>
             <div className="flex justify-between text-base mb-3">
               <span className="text-stone-500">Total mayorista</span>
@@ -487,8 +581,8 @@ function CartDrawer({ lines, totalCurvas, totalUsd, setQty, onClose, onCheckout 
   );
 }
 
-function Checkout({ token, lines, totalCurvas, totalUsd, onBack, onDone }: {
-  token?: string; lines: CartLine[]; totalCurvas: number; totalUsd: number;
+function Checkout({ token, lines, totalUnits, totalUsd, onBack, onDone }: {
+  token?: string; lines: CartLine[]; totalUnits: number; totalUsd: number;
   onBack: () => void; onDone: () => void;
 }) {
   const [empresa, setEmpresa] = useState("");
@@ -511,7 +605,10 @@ function Checkout({ token, lines, totalCurvas, totalUsd, onBack, onDone }: {
             token, empresa, contacto, phone: phone || null, comment: comment || null,
             items: lines.map((l) => ({
               code: l.p.code, name: l.p.name, color: l.v.colorName,
-              colorCode: l.v.colorCode, curvas: l.qty, mayoristaUnit: l.p.mayorista,
+              colorCode: l.v.colorCode, size: l.size || null,
+              curvas: isSized(l.p) ? 0 : l.qty,
+              unidades: isSized(l.p) ? l.qty : l.qty * CURVA_UNITS,
+              mayoristaUnit: unitPrice(l.p, l.v),
             })),
           }),
         });
@@ -532,7 +629,7 @@ function Checkout({ token, lines, totalCurvas, totalUsd, onBack, onDone }: {
       <button onClick={onBack} className="text-sm text-stone-500 mb-6">← Volver al catálogo</button>
       <h1 className="text-2xl font-semibold tracking-tight">Confirmar pedido</h1>
       <p className="text-sm text-stone-500 mt-1">
-        {totalCurvas} curvas · {totalCurvas * CURVA_UNITS} unidades · {usd(totalUsd)}
+        {totalUnits} unidades · {usd(totalUsd)}
       </p>
       <Field label="Empresa / Local *"><input className="inp" value={empresa} onChange={(e) => setEmpresa(e.target.value)} placeholder="Razón social o nombre del local" /></Field>
       <Field label="Nombre de contacto *"><input className="inp" value={contacto} onChange={(e) => setContacto(e.target.value)} /></Field>

@@ -58,6 +58,7 @@ export type PedidoItem = {
   name: string;
   color: string;
   colorCode: string;
+  size: string | null; // talle (Jiu-Jitsu); null en productos por curva
   curvas: number;
   unidades: number;
   mayoristaUnit: number;

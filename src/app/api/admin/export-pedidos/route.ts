@@ -26,7 +26,7 @@ export async function GET() {
   rows.push(
     [
       "Fecha", "Empresa / Local", "Contacto", "Telefono", "Comentario",
-      "Codigo", "Producto", "Color", "Codigo color",
+      "Codigo", "Producto", "Color", "Codigo color", "Talle",
       "Curvas", "Unidades",
       "Mayorista unitario USD", "FOB unitario USD",
       "Subtotal mayorista USD", "Subtotal FOB USD",
@@ -47,6 +47,7 @@ export async function GET() {
           csvCell(it.name),
           csvCell(it.color),
           csvCell(it.colorCode),
+          csvCell(it.size),
           csvCell(it.curvas),
           csvCell(it.unidades),
           csvCell(it.mayoristaUnit),
