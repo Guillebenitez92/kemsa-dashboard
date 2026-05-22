@@ -13,7 +13,8 @@ type Fabric = { name: string; tagline: string; features: string[]; desc: string 
 type Product = {
   code: string; name: string; section: string; category: string;
   collection: string; page: string; mayorista: number;
-  commercialDesc?: string; fabric?: Fabric | null; variants: Variant[];
+  commercialDesc?: string; composition?: string | null;
+  fabric?: Fabric | null; variants: Variant[];
 };
 type Tile = { p: Product; v: Variant; key: string };
 type CartLine = { key: string; p: Product; v: Variant; qty: number };
@@ -387,6 +388,12 @@ function Modal({ tile, cart, setQty, onClose, onPickVariant }: {
 
           {p.commercialDesc && (
             <p className="mt-3 text-sm text-stone-600 leading-relaxed">{p.commercialDesc}</p>
+          )}
+          {p.composition && (
+            <p className="mt-1.5 text-xs text-stone-500">
+              <span className="uppercase tracking-wide text-stone-400">Composición · </span>
+              <span className="font-medium text-stone-700">{p.composition}</span>
+            </p>
           )}
           {p.variants.length > 1 && (
             <div className="mt-4">
