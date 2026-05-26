@@ -17,6 +17,7 @@ type Product = {
   commercialDesc?: string; composition?: string | null;
   variants: Variant[];
 };
+type Tile = { p: Product; v: Variant; key: string };
 type CartLine = { key: string; p: Product; v: Variant; size: string; qty: number };
 
 const MARKUP = 2.3;
@@ -55,7 +56,7 @@ export default function MuestrasPage() {
   // cart key = `${code}/${colorCode}/${size}` → qty (unidades de muestra)
   const [cart, setCart] = useState<Record<string, number>>({});
   const [comment, setComment] = useState("");
-  const [open, setOpen] = useState<Product | null>(null);
+  const [open, setOpen] = useState<Tile | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
 
   // chequeo de sesión admin (endpoint liviano, no toca Supabase).
@@ -108,6 +109,16 @@ export default function MuestrasPage() {
       return true;
     });
   }, [pool0, collection, category, q]);
+
+  // Una tarjeta por producto × color (como en el catálogo mayorista) —
+  // así se ve la variante con SU foto y se elige cualquier color al click.
+  const tiles: Tile[] = useMemo(() => {
+    const out: Tile[] = [];
+    for (const p of filtered)
+      for (const v of p.variants)
+        out.push({ p, v, key: `${p.code}/${v.colorCode}` });
+    return out;
+  }, [filtered]);
 
   const lines: CartLine[] = useMemo(() => {
     if (!products) return [];
@@ -217,41 +228,43 @@ export default function MuestrasPage() {
       </div>
 
       <div className="px-5 sm:px-10 pt-3 text-xs text-stone-400">
-        {filtered.length} productos
+        {filtered.length} productos · {tiles.length} colores
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-8 px-5 sm:px-10 py-4">
-        {filtered.map((p) => {
-          const v0 = p.variants[0];
+        {tiles.map((t) => {
           const inCart = lines
-            .filter((l) => l.p.code === p.code)
+            .filter((l) => l.p.code === t.p.code && l.v.colorCode === t.v.colorCode)
             .reduce((s, l) => s + l.qty, 0);
           return (
-            <button key={p.code} onClick={() => setOpen(p)}
+            <button key={t.key} onClick={() => setOpen(t)}
               className="flex flex-col text-left group">
               <div className={"overflow-hidden rounded-lg " + (inCart > 0 ? "ring-1 ring-black" : "")}>
-                {v0?.photos[0] ? (
+                {t.v.photos[0] ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={v0.photos[0]} alt={p.name} loading="lazy"
+                  <img src={t.v.photos[0]} alt={t.p.name} loading="lazy"
                     className="aspect-[3/4] w-full object-cover bg-stone-100 group-hover:opacity-90 transition" />
                 ) : (
                   <div className="aspect-[3/4] w-full bg-stone-100" />
                 )}
               </div>
               <p className="text-[10px] uppercase tracking-[0.13em] text-stone-400 mt-2.5">
-                {p.section} · {p.category}
+                {t.p.section} · {t.p.category}{t.v.colorCode !== "-" ? ` · ${t.v.colorName}` : ""}
               </p>
-              <p className="text-[13px] leading-snug mt-1 line-clamp-2 min-h-[2.2rem] text-stone-800">{p.name}</p>
-              <p className="text-[11px] text-stone-400 font-mono">#{p.code}</p>
+              <p className="text-[13px] leading-snug mt-1 line-clamp-2 min-h-[2.2rem] text-stone-800">{t.p.name}</p>
+              <p className="text-[11px] text-stone-400 font-mono">
+                #{t.p.code}{t.v.colorCode !== "-" ? ` · color ${t.v.colorCode}` : ""}
+              </p>
               <p className="text-sm font-semibold mt-1">
-                {usd(unitFob(p, v0))}
+                {usd(unitFob(t.p, t.v))}
                 <span className="text-[11px] font-normal text-stone-400 ml-1.5">FOB / unidad</span>
               </p>
-              {p.variants.length > 1 && (
+              {t.p.variants.length > 1 && (
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {p.variants.slice(0, 8).map((vr) => (
+                  {t.p.variants.slice(0, 8).map((vr) => (
                     <span key={vr.colorCode} title={vr.colorName}
-                      className="h-3.5 w-3.5 rounded-full border border-stone-300"
+                      className={"h-3.5 w-3.5 rounded-full border " +
+                        (vr.colorCode === t.v.colorCode ? "border-black ring-1 ring-black" : "border-stone-300")}
                       style={{ backgroundColor: vr.hex }} />
                   ))}
                 </div>
@@ -265,7 +278,7 @@ export default function MuestrasPage() {
       </div>
 
       {open && (
-        <Picker p={open} cart={cart} setQty={setQty} onClose={() => setOpen(null)} />
+        <Picker tile={open} cart={cart} setQty={setQty} onClose={() => setOpen(null)} />
       )}
 
       {cartOpen && (
@@ -316,11 +329,13 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
   );
 }
 
-function Picker({ p, cart, setQty, onClose }: {
-  p: Product; cart: Record<string, number>;
+function Picker({ tile, cart, setQty, onClose }: {
+  tile: Tile; cart: Record<string, number>;
   setQty: (k: string, n: number) => void; onClose: () => void;
 }) {
-  const [vIdx, setVIdx] = useState(0);
+  const { p } = tile;
+  const initialIdx = Math.max(0, p.variants.findIndex((x) => x.colorCode === tile.v.colorCode));
+  const [vIdx, setVIdx] = useState(initialIdx);
   const [gIdx, setGIdx] = useState(0);
   const v = p.variants[vIdx];
   const sizes = defaultSizes(p);
