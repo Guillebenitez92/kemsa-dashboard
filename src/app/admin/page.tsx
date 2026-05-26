@@ -169,6 +169,12 @@ export default function AdminPage() {
             Pedidos mayoristas →
           </a>
           <a
+            href="/admin/muestras"
+            className="text-sm bg-stone-900 text-white rounded-lg px-4 py-2 font-medium"
+          >
+            Muestras KMNO →
+          </a>
+          <a
             href="/api/admin/export"
             className="text-sm bg-brand-accent text-white rounded-lg px-4 py-2 font-medium"
           >
