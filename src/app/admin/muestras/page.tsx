@@ -5,6 +5,7 @@
 // elegir color + talle + cantidad y descargar el pedido de muestras en CSV.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { applyPhotoOverrides, fetchPhotoOverrides } from "@/lib/photo-overrides";
 
 type Variant = {
   colorCode: string; colorName: string; hex: string;
@@ -66,8 +67,11 @@ export default function MuestrasPage() {
     if (r.status === 401) { setState("unauth"); return; }
     if (!r.ok) { setErr("No se pudo verificar la sesión."); setState("error"); return; }
     try {
-      const cd = await fetch("/catalog-data.json", { cache: "no-store" }).then((x) => x.json());
-      setProducts(cd.products);
+      const [cd, overrides] = await Promise.all([
+        fetch("/catalog-data.json", { cache: "no-store" }).then((x) => x.json()),
+        fetchPhotoOverrides(),
+      ]);
+      setProducts(applyPhotoOverrides<Product>(cd.products, overrides));
       setState("ok");
     } catch (e: any) {
       setErr(e?.message || "No se pudo cargar el catálogo.");

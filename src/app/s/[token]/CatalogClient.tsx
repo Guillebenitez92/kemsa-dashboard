@@ -7,6 +7,7 @@
 // /preview) guarda local como vista previa.
 
 import { useEffect, useMemo, useState } from "react";
+import { applyPhotoOverrides, fetchPhotoOverrides } from "@/lib/photo-overrides";
 
 type Variant = {
   colorCode: string; colorName: string; hex: string;
@@ -95,9 +96,13 @@ export default function CatalogClient({ token }: { token?: string }) {
   const [step, setStep] = useState<"catalog" | "checkout" | "done">("catalog");
 
   useEffect(() => {
-    fetch("/catalog-data.json", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((d) => setProducts(d.products))
+    Promise.all([
+      fetch("/catalog-data.json", { cache: "no-store" }).then((r) => r.json()),
+      fetchPhotoOverrides(),
+    ])
+      .then(([d, overrides]) =>
+        setProducts(applyPhotoOverrides<Product>(d.products, overrides)),
+      )
       .catch(() => setProducts([]));
   }, []);
 

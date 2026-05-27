@@ -175,6 +175,12 @@ export default function AdminPage() {
             Muestras KMNO →
           </a>
           <a
+            href="/admin/fotos"
+            className="text-sm bg-stone-700 text-white rounded-lg px-4 py-2 font-medium"
+          >
+            Fotos →
+          </a>
+          <a
             href="/api/admin/export"
             className="text-sm bg-brand-accent text-white rounded-lg px-4 py-2 font-medium"
           >
